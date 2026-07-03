@@ -1,6 +1,12 @@
 {
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    {
+      "source": "/statsplus-api/:lgurl/:endpoint",
+      "destination": "https://statsplus.net/:lgurl/api/:endpoint"
+    },
+    {
+      "source": "/((?!statsplus-api/).*)",
+      "destination": "/index.html"
+    }
   ]
 }

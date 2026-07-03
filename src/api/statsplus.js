@@ -4,9 +4,9 @@ import Papa from 'papaparse';
 // Returns 204 when no data is available for the request.
 
 function buildUrl(lgurl, endpoint, params = {}) {
-  const qs = new URLSearchParams({ lgurl, endpoint, ...params }).toString();
+  const qs = new URLSearchParams(params).toString();
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  return `${origin}/api/proxy?${qs}`;
+  return `${origin}/statsplus-api/${lgurl}/${endpoint}${qs ? `?${qs}` : ''}`;
 }
 
 async function fetchJson(url) {

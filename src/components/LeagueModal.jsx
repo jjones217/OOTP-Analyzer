@@ -156,9 +156,18 @@ export function LeagueModal({ initial, onSave, onDelete, onClose }) {
             />
             <p className="text-xs text-gray-400 mt-0.5">
               Find it at{' '}
-              <span className="font-mono">
-                statsplus.net/{slug || 'yourleague'}/api/teams
-              </span>
+              {slug ? (
+                <a
+                  href={`https://statsplus.net/${slug}/api/teams`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono text-blue-500 hover:underline"
+                >
+                  statsplus.net/{slug}/api/teams
+                </a>
+              ) : (
+                <span className="font-mono">statsplus.net/yourleague/api/teams</span>
+              )}
             </p>
           </label>
 
