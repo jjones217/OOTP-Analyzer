@@ -1,6 +1,6 @@
 // Vercel serverless function — proxies StatsPlus API requests server-side to avoid CORS.
-// .mjs extension is required when package.json has "type": "module".
-// Usage: /api/proxy?lgurl=gbl&endpoint=date[&param1=val1...]
+// api/package.json sets "type": "commonjs" so this file uses require/module.exports
+// regardless of the root package.json having "type": "module".
 
 const ALLOWED = new Set([
   'date', 'exports', 'lgdata', 'teams', 'players',
@@ -10,7 +10,7 @@ const ALLOWED = new Set([
   'gamehistory', 'draftv2', 'ratings',
 ]);
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   const { lgurl, endpoint, ...rest } = req.query;
 
   if (!lgurl || !endpoint) {
@@ -43,4 +43,4 @@ export default async function handler(req, res) {
     console.error('[proxy] fetch error:', err.message, 'url:', url);
     return res.status(502).json({ error: `Proxy fetch failed: ${err.message}` });
   }
-}
+};
