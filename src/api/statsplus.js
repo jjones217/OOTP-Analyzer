@@ -5,7 +5,8 @@ import Papa from 'papaparse';
 
 function buildUrl(lgurl, endpoint, params = {}) {
   const qs = new URLSearchParams({ lgurl, endpoint, ...params }).toString();
-  return `/api/proxy?${qs}`;
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  return `${origin}/api/proxy?${qs}`;
 }
 
 async function fetchJson(url) {
