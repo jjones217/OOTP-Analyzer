@@ -40,6 +40,7 @@ function withTimeout(promise, ms, msg) {
 export function LeagueModal({ initial, onSave, onDelete, onClose }) {
   const [form, setForm] = useState(initial ?? EMPTY);
   const [validating, setValidating] = useState(false);
+  const [lastValidated, setLastValidated] = useState(0);
   const [validationMsg, setValidationMsg] = useState(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
@@ -59,6 +60,12 @@ export function LeagueModal({ initial, onSave, onDelete, onClose }) {
 
   async function handleValidate() {
     if (!slug) return;
+    const now = Date.now();
+    if (now - lastValidated < 10000) {
+      setValidationMsg({ ok: false, text: 'Please wait a few seconds before testing again.' });
+      return;
+    }
+    setLastValidated(now);
     setValidating(true);
     setValidationMsg(null);
     const result = await validateLeague(slug);

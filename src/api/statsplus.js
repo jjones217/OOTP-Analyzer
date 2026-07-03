@@ -33,6 +33,12 @@ export async function validateLeague(lgurl) {
     const res = await fetch(url);
     if (res.status === 204) return { valid: true, currentDate: null };
     if (!res.ok) {
+      if (res.status === 429) {
+        return { valid: false, currentDate: null, error: 'Rate limited by StatsPlus — wait 30 seconds and try again.' };
+      }
+      if (res.status === 404) {
+        return { valid: false, currentDate: null, error: `League "${lgurl}" not found on StatsPlus — check the slug.` };
+      }
       let detail = `HTTP ${res.status}`;
       try { const body = await res.json(); detail = body.error ?? detail; } catch {}
       return { valid: false, currentDate: null, error: detail };
