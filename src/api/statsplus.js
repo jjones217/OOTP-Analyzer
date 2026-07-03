@@ -1,12 +1,11 @@
 import Papa from 'papaparse';
 
-// All StatsPlus endpoints follow: https://statsplus.net/{lgurl}/api/{endpoint}
+// Requests are routed through /api/proxy (Vercel serverless) to avoid CORS.
 // Returns 204 when no data is available for the request.
 
 function buildUrl(lgurl, endpoint, params = {}) {
-  const base = `https://statsplus.net/${lgurl}/api/${endpoint}`;
-  const qs = new URLSearchParams(params).toString();
-  return qs ? `${base}?${qs}` : base;
+  const qs = new URLSearchParams({ lgurl, endpoint, ...params }).toString();
+  return `/api/proxy?${qs}`;
 }
 
 async function fetchJson(url) {
