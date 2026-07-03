@@ -1,6 +1,6 @@
 import Papa from 'papaparse';
 
-// Requests are routed through /api/proxy (Vercel serverless) to avoid CORS.
+// Requests are proxied through Vercel edge rewrites (/statsplus-api/*) to avoid CORS.
 // Returns 204 when no data is available for the request.
 
 function buildUrl(lgurl, endpoint, params = {}) {
@@ -9,10 +9,15 @@ function buildUrl(lgurl, endpoint, params = {}) {
   return `${origin}/statsplus-api/${lgurl}/${endpoint}${qs ? `?${qs}` : ''}`;
 }
 
+function isHtml(res) {
+  return (res.headers.get('content-type') ?? '').includes('text/html');
+}
+
 async function fetchJson(url) {
   const res = await fetch(url);
   if (res.status === 204) return null;
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (isHtml(res)) throw new Error('Received HTML instead of JSON — proxy may not be routing correctly');
   return res.json();
 }
 
@@ -20,6 +25,7 @@ async function fetchCsv(url) {
   const res = await fetch(url);
   if (res.status === 204) return null;
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (isHtml(res)) throw new Error('Received HTML instead of CSV — proxy may not be routing correctly');
   const text = await res.text();
   const { data, errors } = Papa.parse(text, { header: true, skipEmptyLines: true });
   if (errors.length) console.warn('CSV parse warnings', errors);
@@ -33,15 +39,14 @@ export async function validateLeague(lgurl) {
     const res = await fetch(url);
     if (res.status === 204) return { valid: true, currentDate: null };
     if (!res.ok) {
-      if (res.status === 429) {
-        return { valid: false, currentDate: null, error: 'Rate limited by StatsPlus — wait 30 seconds and try again.' };
-      }
-      if (res.status === 404) {
-        return { valid: false, currentDate: null, error: `League "${lgurl}" not found on StatsPlus — check the slug.` };
-      }
+      if (res.status === 429) return { valid: false, currentDate: null, error: 'Rate limited by StatsPlus — wait 30 seconds and try again.' };
+      if (res.status === 404) return { valid: false, currentDate: null, error: `League "${lgurl}" not found — check the slug.` };
       let detail = `HTTP ${res.status}`;
       try { const body = await res.json(); detail = body.error ?? detail; } catch {}
       return { valid: false, currentDate: null, error: detail };
+    }
+    if (isHtml(res)) {
+      return { valid: false, currentDate: null, error: 'Proxy is returning the app page instead of StatsPlus data — Vercel rewrite may not be active yet. Try again in 30 seconds.' };
     }
     const data = await res.json();
     return { valid: true, currentDate: data?.current_date ?? null };

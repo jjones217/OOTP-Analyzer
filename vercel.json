@@ -1,12 +1,4 @@
 {
-  "headers": [
-    {
-      "source": "/statsplus-api/(.*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "s-maxage=60, stale-while-revalidate=120" }
-      ]
-    }
-  ],
   "rewrites": [
     {
       "source": "/statsplus-api/:lgurl/:endpoint",
