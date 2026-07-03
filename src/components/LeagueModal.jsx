@@ -67,7 +67,7 @@ export function LeagueModal({ initial, onSave, onDelete, onClose }) {
       setForm((f) => ({ ...f, lgurl: slug }));
       setValidationMsg({ ok: true, text: `Valid league — current date: ${result.currentDate}` });
     } else {
-      setValidationMsg({ ok: false, text: 'Could not reach this league. Check the URL and try again.' });
+      setValidationMsg({ ok: false, text: `Could not reach this league: ${result.error ?? 'unknown error'}` });
     }
   }
 

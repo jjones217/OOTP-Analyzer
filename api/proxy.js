@@ -32,7 +32,7 @@ export default async function handler(req, res) {
     }
 
     if (!upstream.ok) {
-      return res.status(upstream.status).json({ error: `StatsPlus returned ${upstream.status}` });
+      return res.status(upstream.status).json({ error: `StatsPlus returned ${upstream.status} for ${url}` });
     }
 
     const contentType = upstream.headers.get('content-type') ?? '';
@@ -42,6 +42,6 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=120');
     return res.status(200).send(body);
   } catch (err) {
-    return res.status(502).json({ error: err.message });
+    return res.status(502).json({ error: `${err.message} (fetching ${url})` });
   }
 }

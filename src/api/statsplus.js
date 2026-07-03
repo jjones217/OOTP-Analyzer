@@ -28,10 +28,18 @@ async function fetchCsv(url) {
 // Validate that a league URL slug points to a real StatsPlus league
 export async function validateLeague(lgurl) {
   try {
-    const data = await fetchJson(buildUrl(lgurl, 'date'));
+    const url = buildUrl(lgurl, 'date');
+    const res = await fetch(url);
+    if (res.status === 204) return { valid: true, currentDate: null };
+    if (!res.ok) {
+      let detail = `HTTP ${res.status}`;
+      try { const body = await res.json(); detail = body.error ?? detail; } catch {}
+      return { valid: false, currentDate: null, error: detail };
+    }
+    const data = await res.json();
     return { valid: true, currentDate: data?.current_date ?? null };
-  } catch {
-    return { valid: false, currentDate: null };
+  } catch (err) {
+    return { valid: false, currentDate: null, error: err.message };
   }
 }
 
