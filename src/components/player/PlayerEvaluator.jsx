@@ -15,8 +15,12 @@ const STORAGE_KEY = 'ootp-player-eval';
 const EMPTY = {
   scale: '20-80',
   info: { name: '', position: 'SS', age: '', level: 'mlb' },
-  stats: { hits: '', doubles: '', triples: '', hr: '', avg: '', obp: '', slg: '', opsPlus: '', sb: '', cs: '' },
-  ratings: { contact: '', babip: '', avoidK: '', gap: '', power: '', eye: '', speed: '', stealing: '', baserunning: '', bunt: '' },
+  stats: { hits: '', doubles: '', triples: '', hr: '', avg: '', obp: '', slg: '', wrcPlus: '', sb: '', cs: '' },
+  ratings: {
+    contact: '', contactPot: '', babip: '', babipPot: '', avoidK: '', avoidKPot: '',
+    gap: '', gapPot: '', power: '', powerPot: '', eye: '', eyePot: '',
+    speed: '', stealing: '', baserunning: '', bunt: '',
+  },
   fielding: { cArm: '', cBlk: '', cFrm: '', ifRng: '', ifErr: '', ifArm: '', ifDp: '', ofRng: '', ofErr: '', ofArm: '' },
   posRatings: Object.fromEntries(FIELD_POSITIONS.map((p) => [p, { ovr: '', pot: '' }])),
 };
@@ -49,18 +53,22 @@ const STAT_FIELDS = [
   { key: 'avg', label: 'AVG', step: 0.001, hint: '.285' },
   { key: 'obp', label: 'OBP', step: 0.001, hint: '.350' },
   { key: 'slg', label: 'SLG', step: 0.001, hint: '.450' },
-  { key: 'opsPlus', label: 'OPS+' },
+  { key: 'wrcPlus', label: 'wRC+' },
   { key: 'sb', label: 'SB' },
   { key: 'cs', label: 'CS' },
 ];
 
-const RATING_FIELDS = [
-  { key: 'contact', label: 'Contact' },
-  { key: 'babip', label: 'BABIP' },
-  { key: 'avoidK', label: 'Avoid K' },
-  { key: 'gap', label: 'Gap' },
-  { key: 'power', label: 'Power' },
-  { key: 'eye', label: 'Eye' },
+// Batting ratings have current + potential in OOTP; running ratings don't.
+const BATTING_FIELDS = [
+  { key: 'contact', potKey: 'contactPot', label: 'Contact' },
+  { key: 'babip', potKey: 'babipPot', label: 'BABIP' },
+  { key: 'avoidK', potKey: 'avoidKPot', label: 'Avoid K' },
+  { key: 'gap', potKey: 'gapPot', label: 'Gap' },
+  { key: 'power', potKey: 'powerPot', label: 'Power' },
+  { key: 'eye', potKey: 'eyePot', label: 'Eye' },
+];
+
+const RUNNING_FIELDS = [
   { key: 'speed', label: 'Speed' },
   { key: 'stealing', label: 'Stealing' },
   { key: 'baserunning', label: 'Baserunning' },
@@ -119,7 +127,7 @@ export function PlayerEvaluator() {
     }));
 
   const result = useMemo(() => evaluatePlayer(form), [form]);
-  const { tools, ability, blended, overall, recPositions } = result;
+  const { tools, ability, blended, overall, recPositions, potTools, potOverall } = result;
 
   return (
     <div className="grid gap-6 lg:grid-cols-5">
@@ -193,9 +201,21 @@ export function PlayerEvaluator() {
           </div>
         </Section>
 
-        <Section title="Batting & Running Ratings" subtitle={`Entered on the ${form.scale} scale. Bunt is recorded but not weighted into grades.`}>
-          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
-            {RATING_FIELDS.map(({ key, label }) => (
+        <Section title="Batting Ratings" subtitle={`Current / potential, on the ${form.scale} scale. Potential feeds the POT grade.`}>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2">
+            {BATTING_FIELDS.map(({ key, potKey, label }) => (
+              <div key={key} className="flex items-center gap-2">
+                <span className="w-16 shrink-0 text-xs font-medium text-gray-500 dark:text-gray-400">{label}</span>
+                <NumInput value={form.ratings[key]} onChange={(v) => set('ratings', key, v)} placeholder="Cur" ariaLabel={`${label} current`} />
+                <NumInput value={form.ratings[potKey]} onChange={(v) => set('ratings', potKey, v)} placeholder="Pot" ariaLabel={`${label} potential`} />
+              </div>
+            ))}
+          </div>
+        </Section>
+
+        <Section title="Running Ratings" subtitle="Bunt is recorded but not weighted into grades.">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {RUNNING_FIELDS.map(({ key, label }) => (
               <label key={key} className="block">
                 <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{label}</span>
                 <div className="mt-1">
@@ -262,11 +282,21 @@ export function PlayerEvaluator() {
                   {LEAGUE_LEVELS.find((l) => l.id === form.info.level)?.label}
                 </p>
               </div>
-              <div className="text-center shrink-0">
-                <div className="text-3xl font-bold tabular-nums text-gray-900 dark:text-gray-100">
-                  {overall ?? '—'}
+              <div className="flex gap-4 shrink-0">
+                <div className="text-center">
+                  <div className="text-3xl font-bold tabular-nums text-gray-900 dark:text-gray-100">
+                    {overall ?? '—'}
+                  </div>
+                  <div className="text-[10px] uppercase tracking-wide text-gray-400">OVR (20–80)</div>
                 </div>
-                <div className="text-[10px] uppercase tracking-wide text-gray-400">OVR (20–80)</div>
+                {potOverall !== null && (
+                  <div className="text-center">
+                    <div className="text-3xl font-bold tabular-nums text-blue-600 dark:text-blue-400">
+                      {potOverall}
+                    </div>
+                    <div className="text-[10px] uppercase tracking-wide text-gray-400">POT</div>
+                  </div>
+                )}
               </div>
             </div>
             <p className="mt-1 text-sm font-medium text-blue-600 dark:text-blue-400">{gradeLabel(overall)}</p>
@@ -322,6 +352,7 @@ export function PlayerEvaluator() {
                   <th className="text-right font-semibold py-1">Tools</th>
                   <th className="text-right font-semibold py-1">Ability</th>
                   <th className="text-right font-semibold py-1">Blended</th>
+                  {potTools && <th className="text-right font-semibold py-1">Pot</th>}
                 </tr>
               </thead>
               <tbody>
@@ -331,6 +362,9 @@ export function PlayerEvaluator() {
                     <td className="py-1 text-right tabular-nums text-gray-900 dark:text-gray-100">{fmt(tools[key])}</td>
                     <td className="py-1 text-right tabular-nums text-gray-900 dark:text-gray-100">{fmt(ability[key])}</td>
                     <td className="py-1 text-right tabular-nums font-semibold text-gray-900 dark:text-gray-100">{fmt(blended[key])}</td>
+                    {potTools && (
+                      <td className="py-1 text-right tabular-nums text-blue-600 dark:text-blue-400">{fmt(potTools[key])}</td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -338,7 +372,8 @@ export function PlayerEvaluator() {
             <p className="mt-2 text-[11px] leading-relaxed text-gray-400">
               Tools come from scouting ratings; Ability from the stat line (league-adjusted).
               The OVR blends both, weighted for the player's position. Field &amp; Arm always
-              use ratings — no fielding stats on the card.
+              use ratings — no fielding stats on the card. POT is the scouting ceiling from
+              potential ratings only.
             </p>
           </section>
         </div>
