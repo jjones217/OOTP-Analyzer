@@ -33,9 +33,12 @@ export const TOOL_AXES = [
 ];
 export const FIELD_POSITIONS = ['C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
 
-const clamp = (v, lo = 20, hi = 80) => Math.min(hi, Math.max(lo, v));
+export const clamp = (v, lo = 20, hi = 80) => Math.min(hi, Math.max(lo, v));
 
-function num(v) {
+// Display helper: round a grade, em-dash for missing.
+export const fmt = (v) => (v === null || v === undefined ? '\u2014' : Math.round(v));
+
+export function num(v) {
   if (v === '' || v === null || v === undefined) return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
@@ -54,7 +57,9 @@ export function to2080(value, scale) {
 }
 
 // Piecewise-linear interpolation through [statValue, grade] anchor points.
-function gradeFrom(value, points) {
+// Anchors must be ascending in stat value; grades may descend for stats
+// where lower is better (ERA, BB/9).
+export function gradeFrom(value, points) {
   if (value === null) return null;
   if (value <= points[0][0]) return points[0][1];
   for (let i = 1; i < points.length; i++) {
@@ -77,7 +82,7 @@ const TRIP_PTS = [[0, 44], [2, 50], [4, 55], [7, 62], [10, 68], [15, 78]];
 
 // Weighted mean over [value, weight] pairs; ignores null values,
 // renormalizing the remaining weights. Returns null if nothing present.
-function wMean(pairs) {
+export function wMean(pairs) {
   let sum = 0, wt = 0;
   for (const [v, w] of pairs) {
     if (v === null || v === undefined) continue;
