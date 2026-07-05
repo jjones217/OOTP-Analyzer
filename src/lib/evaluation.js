@@ -70,7 +70,7 @@ const AVG_PTS = [[0.180, 25], [0.220, 35], [0.250, 45], [0.270, 50], [0.290, 55]
 const OBP_PTS = [[0.260, 25], [0.300, 40], [0.320, 45], [0.335, 50], [0.360, 58], [0.380, 64], [0.400, 70], [0.430, 78]];
 const SLG_PTS = [[0.300, 25], [0.360, 38], [0.400, 45], [0.430, 50], [0.470, 57], [0.510, 63], [0.550, 70], [0.610, 80]];
 const ISO_PTS = [[0.050, 28], [0.090, 38], [0.120, 45], [0.150, 50], [0.180, 57], [0.220, 65], [0.270, 74], [0.320, 80]];
-const OPSP_PTS = [[40, 20], [70, 35], [85, 43], [100, 50], [115, 57], [130, 64], [150, 72], [180, 80]];
+const WRC_PTS = [[40, 20], [70, 35], [85, 43], [100, 50], [115, 57], [130, 64], [150, 72], [180, 80]];
 const HR_PTS = [[0, 25], [5, 35], [10, 42], [15, 47], [20, 52], [25, 58], [30, 64], [40, 72], [50, 80]];
 const SB_PTS = [[0, 40], [5, 46], [10, 50], [20, 57], [30, 63], [45, 70], [60, 78]];
 const TRIP_PTS = [[0, 44], [2, 50], [4, 55], [7, 62], [10, 68], [15, 78]];
@@ -113,13 +113,22 @@ function outfieldDef(f) {
   return wMean([[f.ofRng, 0.65], [f.ofErr, 0.35]]);
 }
 
-// r = normalized ratings, f = normalized fielding
-export function computeTools(r, f) {
+// r = normalized ratings, f = normalized fielding.
+// With `potential: true`, batting ratings use their potential values
+// (falling back to current where no potential was entered) — running and
+// fielding ratings have no potential inputs, so they stay as-is.
+export function computeTools(r, f, { potential = false } = {}) {
+  const pick = (cur, pot) => (potential && pot != null ? pot : cur);
   const fieldCandidates = [catcherDef(f), infieldDef(f), outfieldDef(f)].filter((v) => v !== null);
   const armCandidates = [f.cArm, f.ifArm, f.ofArm].filter((v) => v !== null && v !== undefined);
   return {
-    hit: wMean([[r.contact, 0.4], [r.babip, 0.2], [r.avoidK, 0.2], [r.eye, 0.2]]),
-    power: wMean([[r.power, 0.8], [r.gap, 0.2]]),
+    hit: wMean([
+      [pick(r.contact, r.contactPot), 0.4],
+      [pick(r.babip, r.babipPot), 0.2],
+      [pick(r.avoidK, r.avoidKPot), 0.2],
+      [pick(r.eye, r.eyePot), 0.2],
+    ]),
+    power: wMean([[pick(r.power, r.powerPot), 0.8], [pick(r.gap, r.gapPot), 0.2]]),
     run: wMean([[r.speed, 0.5], [r.baserunning, 0.3], [r.stealing, 0.2]]),
     field: fieldCandidates.length ? Math.max(...fieldCandidates) : null,
     arm: armCandidates.length ? Math.max(...armCandidates) : null,
@@ -139,18 +148,18 @@ export function computeAbility(stats, level, tools) {
   const avg = num(stats.avg);
   const obp = num(stats.obp);
   const slg = num(stats.slg);
-  const opsPlus = num(stats.opsPlus);
+  const wrcPlus = num(stats.wrcPlus);
   const hr = num(stats.hr);
   const sb = num(stats.sb);
   const cs = num(stats.cs);
   const triples = num(stats.triples);
   const iso = avg !== null && slg !== null ? slg - avg : null;
 
-  // OPS+ is already league/park adjusted by OOTP, so no level offset there.
+  // wRC+ is already league/park adjusted by OOTP, so no level offset there.
   const hitStat = wMean([
     [adj(gradeFrom(avg, AVG_PTS)), 0.5],
     [adj(gradeFrom(obp, OBP_PTS)), 0.3],
-    [gradeFrom(opsPlus, OPSP_PTS), 0.2],
+    [gradeFrom(wrcPlus, WRC_PTS), 0.2],
   ]);
 
   const powerStat = wMean([
@@ -251,6 +260,20 @@ export function gradeLabel(ovr) {
 // bonus in the ranking (scaled by how well he actually fits there).
 const POS_VALUE = { C: 8, SS: 8, CF: 6, '2B': 4, '3B': 4, RF: 2, LF: 0, '1B': -6 };
 
+// Minimum arm grade a position realistically demands. An arm below the bar
+// docks the computed fit hard — great range can't cover for a 20 arm at SS.
+const ARM_REQ = { C: 50, SS: 50, '3B': 55, RF: 55, CF: 45, '2B': 40, LF: 40, '1B': 30 };
+const ARM_FOR_POS = {
+  C: 'cArm', SS: 'ifArm', '2B': 'ifArm', '3B': 'ifArm', '1B': 'ifArm',
+  LF: 'ofArm', CF: 'ofArm', RF: 'ofArm',
+};
+
+function armPenalty(pos, f) {
+  const arm = f[ARM_FOR_POS[pos]];
+  if (arm == null) return 0;
+  return Math.max(0, (ARM_REQ[pos] ?? 0) - arm) * 1.2;
+}
+
 // A position only gets a computed score if the anchor rating for its
 // fielding group was actually entered — speed alone doesn't make a CF.
 function rawPosScore(pos, f, r) {
@@ -287,7 +310,8 @@ function rawPosScore(pos, f, r) {
 export function recommendPositions(f, r, posRatings, scale) {
   const results = [];
   for (const pos of FIELD_POSITIONS) {
-    const computed = rawPosScore(pos, f, r);
+    const raw = rawPosScore(pos, f, r);
+    const computed = raw === null ? null : Math.max(20, raw - armPenalty(pos, f));
     const entered = posRatings?.[pos];
     const ovr = to2080(entered?.ovr, scale);
     const pot = to2080(entered?.pot, scale);
@@ -318,6 +342,8 @@ export function recommendPositions(f, r, posRatings, scale) {
 // Top-level: run the whole card.
 // ---------------------------------------------------------------------------
 
+const POT_KEYS = ['contactPot', 'babipPot', 'avoidKPot', 'gapPot', 'powerPot', 'eyePot'];
+
 export function evaluatePlayer(input) {
   const { info, stats, ratings, fielding, posRatings, scale } = input;
   const r = normalizeRatings(ratings, scale);
@@ -329,5 +355,11 @@ export function evaluatePlayer(input) {
   const overall = computeOverall(blended, info.position);
   const recPositions = recommendPositions(f, r, posRatings, scale);
 
-  return { tools, ability, blended, overall, recPositions };
+  // Ceiling grade — scouting potential only (stats measure the present,
+  // so they don't factor into what the player could become).
+  const hasPot = POT_KEYS.some((k) => r[k] != null);
+  const potTools = hasPot ? computeTools(r, f, { potential: true }) : null;
+  const potOverall = hasPot ? computeOverall(potTools, info.position) : null;
+
+  return { tools, ability, blended, overall, recPositions, potTools, potOverall };
 }

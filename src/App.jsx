@@ -1,31 +1,33 @@
-import { useState } from 'react';
-import { useLeagues } from './hooks/useLeagues';
-import { LeagueCard } from './components/LeagueCard';
-import { LeagueModal } from './components/LeagueModal';
+// The Leagues dashboard is parked for now — see the commented blocks below
+// (imports, state, handlers, nav, main view, modal) to bring it back.
+// import { useState } from 'react';
+// import { useLeagues } from './hooks/useLeagues';
+// import { LeagueCard } from './components/LeagueCard';
+// import { LeagueModal } from './components/LeagueModal';
 import { PlayerEvaluator } from './components/player/PlayerEvaluator';
 
 export default function App() {
-  const { leagues, loading, addLeague, updateLeague, removeLeague } = useLeagues();
-  const [modal, setModal] = useState(null); // null | { mode: 'add' } | { mode: 'edit', league }
-  const [view, setView] = useState('leagues'); // 'leagues' | 'evaluator'
+  // const { leagues, loading, addLeague, updateLeague, removeLeague } = useLeagues();
+  // const [modal, setModal] = useState(null); // null | { mode: 'add' } | { mode: 'edit', league }
+  // const [view, setView] = useState('leagues'); // 'leagues' | 'evaluator'
 
-  function openAdd() { setModal({ mode: 'add' }); }
-  function openEdit(league) { setModal({ mode: 'edit', league }); }
-  function closeModal() { setModal(null); }
+  // function openAdd() { setModal({ mode: 'add' }); }
+  // function openEdit(league) { setModal({ mode: 'edit', league }); }
+  // function closeModal() { setModal(null); }
 
-  async function handleSave(data) {
-    if (modal?.mode === 'edit') {
-      await updateLeague(modal.league.id, data);
-    } else {
-      await addLeague(data);
-    }
-  }
+  // async function handleSave(data) {
+  //   if (modal?.mode === 'edit') {
+  //     await updateLeague(modal.league.id, data);
+  //   } else {
+  //     await addLeague(data);
+  //   }
+  // }
 
-  async function handleDelete() {
-    if (modal?.mode === 'edit') {
-      await removeLeague(modal.league.id);
-    }
-  }
+  // async function handleDelete() {
+  //   if (modal?.mode === 'edit') {
+  //     await removeLeague(modal.league.id);
+  //   }
+  // }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
@@ -38,8 +40,9 @@ export default function App() {
               <h1 className="text-xl font-bold leading-none text-gray-900 dark:text-gray-100">
                 OOTP Analyzer
               </h1>
-              <p className="text-xs text-gray-400 mt-0.5">Powered by StatsPlus</p>
+              <p className="text-xs text-gray-400 mt-0.5">Player Evaluator</p>
             </div>
+            {/* Leagues tab parked with the dashboard:
             <nav className="ml-6 flex gap-1">
               {[['leagues', 'Leagues'], ['evaluator', 'Player Evaluator']].map(([id, label]) => (
                 <button
@@ -55,20 +58,23 @@ export default function App() {
                 </button>
               ))}
             </nav>
+            */}
           </div>
-          {view === 'leagues' && (
+          {/* {view === 'leagues' && (
             <button
               onClick={openAdd}
               className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
             >
               <span className="text-lg leading-none">+</span> Add League
             </button>
-          )}
+          )} */}
         </div>
       </header>
 
       {/* Main */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <PlayerEvaluator />
+        {/* Leagues view, parked:
         {view === 'evaluator' ? (
           <PlayerEvaluator />
         ) : loading ? (
@@ -97,9 +103,10 @@ export default function App() {
             ))}
           </div>
         )}
+        */}
       </main>
 
-      {/* Modal */}
+      {/* Modal, parked:
       {modal && (
         <LeagueModal
           initial={modal.mode === 'edit' ? modal.league : null}
@@ -108,6 +115,7 @@ export default function App() {
           onClose={closeModal}
         />
       )}
+      */}
     </div>
   );
 }
