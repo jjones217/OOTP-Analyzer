@@ -4,4 +4,22 @@
 
 :root {
   color-scheme: light dark;
+  --chart-surface: #fcfcfb;
+  --chart-grid: #e1e0d9;
+  --chart-ink: #0b0b0b;
+  --chart-ink-2: #52514e;
+  --chart-muted: #898781;
+  --series-tools: #2a78d6;
+  --series-ability: #1baf7a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --chart-surface: #1a1a19;
+    --chart-grid: #2c2c2a;
+    --chart-ink: #ffffff;
+    --chart-ink-2: #c3c2b7;
+    --series-tools: #3987e5;
+    --series-ability: #199e70;
+  }
 }
