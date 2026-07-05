@@ -79,6 +79,9 @@ const WRC_PTS = [[40, 20], [70, 35], [85, 43], [100, 50], [115, 57], [130, 64], 
 const HR_PTS = [[0, 25], [5, 35], [10, 42], [15, 47], [20, 52], [25, 58], [30, 64], [40, 72], [50, 80]];
 const SB_PTS = [[0, 40], [5, 46], [10, 50], [20, 57], [30, 63], [45, 70], [60, 78]];
 const TRIP_PTS = [[0, 44], [2, 50], [4, 55], [7, 62], [10, 68], [15, 78]];
+// K% / BB% (per PA) — K% graded inversely, contact skill shows in whiffs.
+const KPCT_PTS = [[8, 68], [12, 60], [16, 53], [20, 47], [24, 40], [30, 30]];
+const BBPCT_PTS = [[3, 32], [5, 42], [7, 48], [9, 54], [11, 60], [13, 66], [16, 74]];
 
 // Weighted mean over [value, weight] pairs; ignores null values,
 // renormalizing the remaining weights. Returns null if nothing present.
@@ -150,38 +153,48 @@ export function computeAbility(stats, level, tools) {
   const offset = LEAGUE_LEVELS.find((l) => l.id === level)?.offset ?? 0;
   const adj = (g) => (g === null ? null : clamp(g + offset));
 
+  const pa = num(stats.pa);
   const avg = num(stats.avg);
   const obp = num(stats.obp);
   const slg = num(stats.slg);
   const wrcPlus = num(stats.wrcPlus);
   const hr = num(stats.hr);
+  const bb = num(stats.bb);
+  const k = num(stats.k);
   const sb = num(stats.sb);
   const cs = num(stats.cs);
   const triples = num(stats.triples);
   const iso = avg !== null && slg !== null ? slg - avg : null;
 
+  // Counting stats are graded against full-season anchors, so normalize
+  // them per 600 PA when PA was entered (raw otherwise).
+  const per600 = (x) => (x !== null && pa !== null && pa > 0 ? (x * 600) / pa : x);
+  const rate = (x) => (x !== null && pa !== null && pa > 0 ? (x / pa) * 100 : null);
+
   // wRC+ is already league/park adjusted by OOTP, so no level offset there.
   const hitStat = wMean([
-    [adj(gradeFrom(avg, AVG_PTS)), 0.5],
-    [adj(gradeFrom(obp, OBP_PTS)), 0.3],
+    [adj(gradeFrom(avg, AVG_PTS)), 0.4],
+    [adj(gradeFrom(obp, OBP_PTS)), 0.2],
     [gradeFrom(wrcPlus, WRC_PTS), 0.2],
+    [adj(gradeFrom(rate(k), KPCT_PTS)), 0.1],
+    [adj(gradeFrom(rate(bb), BBPCT_PTS)), 0.1],
   ]);
 
   const powerStat = wMean([
     [adj(gradeFrom(slg, SLG_PTS)), 0.35],
     [adj(gradeFrom(iso, ISO_PTS)), 0.35],
-    [adj(gradeFrom(hr, HR_PTS)), 0.3],
+    [adj(gradeFrom(per600(hr), HR_PTS)), 0.3],
   ]);
 
   // Steal grade tempered by success rate: below ~65% success, volume lies.
-  let sbGrade = gradeFrom(sb, SB_PTS);
+  let sbGrade = gradeFrom(per600(sb), SB_PTS);
   if (sbGrade !== null && sb !== null && cs !== null && sb + cs >= 5) {
-    const rate = sb / (sb + cs);
-    sbGrade += (rate - 0.72) * 40; // ±: 72% breakeven-ish
+    const successRate = sb / (sb + cs);
+    sbGrade += (successRate - 0.72) * 40; // ±: 72% breakeven-ish
   }
   const runStat = wMean([
     [adj(sbGrade === null ? null : clamp(sbGrade)), 0.6],
-    [adj(gradeFrom(triples, TRIP_PTS)), 0.4],
+    [adj(gradeFrom(per600(triples), TRIP_PTS)), 0.4],
   ]);
 
   return {
@@ -191,20 +204,30 @@ export function computeAbility(stats, level, tools) {
     field: tools.field, // no fielding stats on the card — ratings carry these
     arm: tools.arm,
     hasStats: hitStat !== null || powerStat !== null || runStat !== null,
+    pa,
   };
 }
 
 // ---------------------------------------------------------------------------
 // Blended tool values (stats + ratings) — the numbers the OVR is built on.
-// When a stat-based grade exists, it's a 50/50 blend with the rating.
+// statWeight is how much of the blend the stat side earns: a full season
+// gets the full 50%, a cup of coffee barely registers.
 // ---------------------------------------------------------------------------
 
-export function computeBlended(tools, ability) {
+// PA where the stat line earns its full half of the blend.
+const FULL_SEASON_PA = 450;
+
+export function statBlendWeight(pa) {
+  if (pa === null || pa === undefined) return 0.5; // unknown sample — assume a season
+  return 0.5 * Math.min(1, pa / FULL_SEASON_PA);
+}
+
+export function computeBlended(tools, ability, statWeight = 0.5) {
   const blend = (t, a) => {
     if (t === null && a === null) return null;
     if (t === null) return a;
     if (a === null) return t;
-    return t * 0.5 + a * 0.5;
+    return t * (1 - statWeight) + a * statWeight;
   };
   return {
     hit: blend(tools.hit, ability.hit),
@@ -356,7 +379,8 @@ export function evaluatePlayer(input) {
 
   const tools = computeTools(r, f);
   const ability = computeAbility(stats, info.level, tools);
-  const blended = computeBlended(tools, ability);
+  const statWeight = ability.hasStats ? statBlendWeight(ability.pa) : 0;
+  const blended = computeBlended(tools, ability, statWeight);
   const overall = computeOverall(blended, info.position);
   const recPositions = recommendPositions(f, r, posRatings, scale);
 
@@ -366,5 +390,5 @@ export function evaluatePlayer(input) {
   const potTools = hasPot ? computeTools(r, f, { potential: true }) : null;
   const potOverall = hasPot ? computeOverall(potTools, info.position) : null;
 
-  return { tools, ability, blended, overall, recPositions, potTools, potOverall };
+  return { tools, ability, blended, overall, recPositions, potTools, potOverall, statWeight };
 }

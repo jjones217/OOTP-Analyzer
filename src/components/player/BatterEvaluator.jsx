@@ -17,11 +17,11 @@ const STORAGE_KEY = 'ootp-player-eval';
 const EMPTY = {
   scale: '20-80',
   info: { name: '', position: 'SS', age: '', level: 'mlb' },
-  stats: { hits: '', doubles: '', triples: '', hr: '', avg: '', obp: '', slg: '', wrcPlus: '', sb: '', cs: '' },
+  stats: { pa: '', hits: '', doubles: '', triples: '', hr: '', bb: '', k: '', avg: '', obp: '', slg: '', wrcPlus: '', sb: '', cs: '' },
   ratings: {
     contact: '', contactPot: '', babip: '', babipPot: '', avoidK: '', avoidKPot: '',
     gap: '', gapPot: '', power: '', powerPot: '', eye: '', eyePot: '',
-    speed: '', stealing: '', baserunning: '', bunt: '',
+    speed: '', stlAggr: '', stealing: '', baserunning: '', sacBunt: '', buntForHit: '',
   },
   fielding: { cArm: '', cBlk: '', cFrm: '', ifRng: '', ifErr: '', ifArm: '', ifDp: '', ofRng: '', ofErr: '', ofArm: '' },
   posRatings: Object.fromEntries(FIELD_POSITIONS.map((p) => [p, { ovr: '', pot: '' }])),
@@ -32,6 +32,10 @@ function loadSaved() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return EMPTY;
     const saved = JSON.parse(raw);
+    // Older saves had a single "bunt" rating — carry it into Sac Bunt.
+    if (saved.ratings?.bunt && !saved.ratings.sacBunt) {
+      saved.ratings.sacBunt = saved.ratings.bunt;
+    }
     // Merge over EMPTY so newly added fields don't come back undefined
     return {
       ...EMPTY,
@@ -48,10 +52,13 @@ function loadSaved() {
 }
 
 const STAT_FIELDS = [
+  { key: 'pa', label: 'PA' },
   { key: 'hits', label: 'Hits' },
   { key: 'doubles', label: '2B' },
   { key: 'triples', label: '3B' },
   { key: 'hr', label: 'HR' },
+  { key: 'bb', label: 'BB' },
+  { key: 'k', label: 'K' },
   { key: 'avg', label: 'AVG', step: 0.001, hint: '.285' },
   { key: 'obp', label: 'OBP', step: 0.001, hint: '.350' },
   { key: 'slg', label: 'SLG', step: 0.001, hint: '.450' },
@@ -72,9 +79,11 @@ const BATTING_FIELDS = [
 
 const RUNNING_FIELDS = [
   { key: 'speed', label: 'Speed' },
+  { key: 'stlAggr', label: 'Stl Aggr' },
   { key: 'stealing', label: 'Stealing' },
-  { key: 'baserunning', label: 'Baserunning' },
-  { key: 'bunt', label: 'Bunt' },
+  { key: 'baserunning', label: 'Running' },
+  { key: 'sacBunt', label: 'Sac Bunt' },
+  { key: 'buntForHit', label: 'Bunt for Hit' },
 ];
 
 const FIELDING_GROUPS = [
@@ -102,7 +111,7 @@ export function BatterEvaluator() {
     }));
 
   const result = useMemo(() => evaluatePlayer(form), [form]);
-  const { tools, ability, blended, overall, recPositions, potTools, potOverall } = result;
+  const { tools, ability, blended, overall, recPositions, potTools, potOverall, statWeight } = result;
 
   return (
     <div className="grid gap-6 lg:grid-cols-5">
@@ -157,7 +166,7 @@ export function BatterEvaluator() {
           </div>
         </Section>
 
-        <Section title="Stats" subtitle="Season batting line — stats from lower levels are translated to MLB-equivalent grades.">
+        <Section title="Stats" subtitle="Season batting line — stats from lower levels are translated to MLB-equivalent grades. PA scales how much the sample counts: a cup of coffee barely moves the blend.">
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
             {STAT_FIELDS.map(({ key, label, step, hint }) => (
               <label key={key} className="block">
@@ -188,8 +197,8 @@ export function BatterEvaluator() {
           </div>
         </Section>
 
-        <Section title="Running Ratings" subtitle="Bunt is recorded but not weighted into grades.">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Section title="Run / Bunt Ratings" subtitle="Steal aggressiveness and bunting are recorded but not weighted into grades.">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {RUNNING_FIELDS.map(({ key, label }) => (
               <label key={key} className="block">
                 <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{label}</span>
@@ -345,8 +354,13 @@ export function BatterEvaluator() {
               </tbody>
             </table>
             <p className="mt-2 text-[11px] leading-relaxed text-gray-400">
-              Tools come from scouting ratings; Ability from the stat line (league-adjusted).
-              The OVR blends both, weighted for the player's position. Field &amp; Arm always
+              Tools come from scouting ratings; Ability from the stat line (league-adjusted,
+              counting stats normalized per 600 PA).
+              {ability.hasStats && statWeight > 0 && (
+                <> Stats carry <span className="font-semibold">{Math.round(statWeight * 100)}%</span> of
+                the blend{ability.pa !== null && statWeight < 0.5 ? ' (small sample)' : ''}.</>
+              )}
+              {' '}The OVR is weighted for the player's position. Field &amp; Arm always
               use ratings — no fielding stats on the card. POT is the scouting ceiling from
               potential ratings only.
             </p>
