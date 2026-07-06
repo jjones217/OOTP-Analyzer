@@ -2,8 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Theme is class-based: the `dark` class on <html> is set by useTheme
+   (and the inline script in index.html before first paint). */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
   --chart-surface: #fcfcfb;
   --chart-grid: #e1e0d9;
   --chart-ink: #0b0b0b;
@@ -13,13 +15,12 @@
   --series-ability: #1baf7a;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --chart-surface: #1a1a19;
-    --chart-grid: #2c2c2a;
-    --chart-ink: #ffffff;
-    --chart-ink-2: #c3c2b7;
-    --series-tools: #3987e5;
-    --series-ability: #199e70;
-  }
+:root.dark {
+  color-scheme: dark;
+  --chart-surface: #1a1a19;
+  --chart-grid: #2c2c2a;
+  --chart-ink: #ffffff;
+  --chart-ink-2: #c3c2b7;
+  --series-tools: #3987e5;
+  --series-ability: #199e70;
 }
