@@ -354,24 +354,32 @@ export function recommendPositions(f, r, posRatings, scale) {
     const entered = posRatings?.[pos];
     const ovr = to2080(entered?.ovr, scale);
     const pot = to2080(entered?.pot, scale);
-    const gameRating = wMean([[ovr, 0.5], [pot, 0.5]]);
 
-    let fit = null;
-    if (computed !== null && gameRating !== null) {
-      fit = computed * 0.45 + gameRating * 0.55;
-    } else if (computed !== null) {
-      fit = computed;
-    } else if (gameRating !== null) {
-      fit = gameRating;
-    }
+    // Current fit uses the in-game current rating; potential fit uses the
+    // in-game potential (the computed fielding score has no potential
+    // inputs, so it anchors both).
+    const combine = (rating) => {
+      if (computed !== null && rating !== null) return computed * 0.45 + rating * 0.55;
+      if (computed !== null) return computed;
+      return rating;
+    };
+    const fit = combine(ovr);
+    const fitPot = combine(pot ?? ovr);
     if (fit === null) continue;
 
     // Rank by fit plus a positional-value bonus that only applies when the
     // player can actually handle the spot (fades below fit 45, flips to a
-    // penalty for a bad fit at a hard position).
-    const competence = Math.max(-1, Math.min(1, (fit - 45) / 15));
-    const score = fit + (POS_VALUE[pos] ?? 0) * competence;
-    results.push({ pos, score, fit: Math.round(fit) });
+    // penalty for a bad fit at a hard position). Potential counts half —
+    // where he could end up matters, but what he is now matters more.
+    const rankFit = fitPot !== null ? fit * 0.67 + fitPot * 0.33 : fit;
+    const competence = Math.max(-1, Math.min(1, (rankFit - 45) / 15));
+    const score = rankFit + (POS_VALUE[pos] ?? 0) * competence;
+    results.push({
+      pos,
+      score,
+      fit: Math.round(fit),
+      fitPot: fitPot === null ? null : Math.round(fitPot),
+    });
   }
   results.sort((a, b) => b.score - a.score);
   return results.slice(0, 3);
