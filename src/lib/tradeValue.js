@@ -102,6 +102,47 @@ export function playerTradeValue(player, scale) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Free-agent offer recommendation: contract length from age and quality,
+// salary from projected WAR over that contract at the market $/WAR rate.
+// ---------------------------------------------------------------------------
+
+const round1 = (v) => Math.round(v * 10) / 10;
+
+export function faOffer(player, scale) {
+  const scaleUsed = player.scale ?? scale ?? '20-80';
+  const ovr = to2080(player.ovr, scaleUsed);
+  const pot = to2080(player.pot, scaleUsed);
+  const age = num(player.age) ?? 27;
+  const level = player.level ?? 'mlb';
+
+  const war = expectedWar(ovr, pot, age, level);
+  if (war === null) return null;
+  if (war < 0.5) return { minimum: true, years: 1, aav: 1, total: 1, maxAav: 1.5, ageAssumed: num(player.age) === null };
+
+  // Contract length: age sets the base, quality stretches or shortens it.
+  let years = age <= 25 ? 6 : age <= 28 ? 5 : age <= 30 ? 4 : age <= 32 ? 3 : age <= 34 ? 2 : 1;
+  const grade = effectiveGrade(ovr, pot, age, level);
+  if (grade >= 62) years += 1;
+  if (grade < 50) years = Math.max(1, years - 1);
+  years = Math.min(years, 8);
+
+  // Pay for the average projected season across the deal, decline included —
+  // that's what makes long contracts for older players price themselves down.
+  let sum = 0;
+  for (let t = 0; t < years; t++) sum += war * agingFactor(age + t);
+  const aav = Math.max(1, (sum / years) * WAR_COST);
+
+  return {
+    minimum: false,
+    years,
+    aav: round1(aav),
+    total: round1(aav * years),
+    maxAav: round1(aav * 1.15), // walk-away number: ~15% over fair
+    ageAssumed: num(player.age) === null,
+  };
+}
+
 export function sideTotal(players, scale) {
   let sum = 0;
   for (const p of players) {
