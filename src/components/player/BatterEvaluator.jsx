@@ -11,6 +11,7 @@ import {
 } from '../../lib/evaluation';
 import { RadarChart } from './RadarChart';
 import { NumInput, Section } from './formControls';
+import { AddToTrade } from './AddToTrade';
 
 const STORAGE_KEY = 'ootp-player-eval';
 
@@ -305,6 +306,21 @@ export function BatterEvaluator() {
                 </ol>
               )}
             </div>
+
+            <AddToTrade
+              player={{
+                name: form.info.name,
+                ovr: overall === null ? '' : String(overall),
+                pot: potOverall === null ? '' : String(potOverall),
+                age: form.info.age,
+                level: form.info.level,
+                controlYears: '',
+                salary: '',
+                injury: 'normal',
+                scale: '20-80',
+              }}
+              disabled={overall === null}
+            />
           </section>
 
           <section className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">

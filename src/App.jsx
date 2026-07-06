@@ -5,8 +5,10 @@
 // import { LeagueCard } from './components/LeagueCard';
 // import { LeagueModal } from './components/LeagueModal';
 import { PlayerEvaluator } from './components/player/PlayerEvaluator';
+import { useTheme, THEMES } from './hooks/useTheme';
 
 export default function App() {
+  const [theme, setTheme] = useTheme();
   // const { leagues, loading, addLeague, updateLeague, removeLeague } = useLeagues();
   // const [modal, setModal] = useState(null); // null | { mode: 'add' } | { mode: 'edit', league }
   // const [view, setView] = useState('leagues'); // 'leagues' | 'evaluator'
@@ -68,6 +70,24 @@ export default function App() {
               <span className="text-lg leading-none">+</span> Add League
             </button>
           )} */}
+
+          {/* Theme toggle */}
+          <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-xs font-medium" role="group" aria-label="Theme">
+            {THEMES.map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => setTheme(id)}
+                aria-pressed={theme === id}
+                className={`px-3 py-1.5 ${
+                  theme === id
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
 
