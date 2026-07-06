@@ -9,34 +9,12 @@ import {
   defaultControlYears,
 } from '../../lib/tradeValue';
 import { NumInput, TextInput, SelectInput, Section } from './../player/formControls';
-
-const STORAGE_KEY = 'ootp-trade-analyzer';
-
-const EMPTY_PLAYER = {
-  name: '', ovr: '', pot: '', age: '', level: 'mlb', controlYears: '', salary: '', injury: 'normal',
-};
-
-const EMPTY = {
-  scale: '20-80',
-  sideA: { label: 'You receive', players: [{ ...EMPTY_PLAYER }] },
-  sideB: { label: 'You give up', players: [{ ...EMPTY_PLAYER }] },
-};
-
-function loadSaved() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return EMPTY;
-    const saved = JSON.parse(raw);
-    return {
-      ...EMPTY,
-      ...saved,
-      sideA: { ...EMPTY.sideA, ...saved.sideA },
-      sideB: { ...EMPTY.sideB, ...saved.sideB },
-    };
-  } catch {
-    return EMPTY;
-  }
-}
+import {
+  EMPTY_PLAYER,
+  loadTradeState,
+  saveTradeState,
+  emptyTradeState,
+} from '../../lib/tradeStore';
 
 const VERDICT_TONES = {
   muted: 'text-gray-400',
@@ -45,7 +23,7 @@ const VERDICT_TONES = {
   clear: 'text-red-600 dark:text-red-400',
 };
 
-function PlayerRow({ player, scale, onChange, onRemove }) {
+function PlayerRow({ player, scale, onChange, onBench, onDelete }) {
   const { value, grade, annualWar } = playerTradeValue(player, scale);
   const set = (key, v) => onChange({ ...player, [key]: v });
 
@@ -62,8 +40,17 @@ function PlayerRow({ player, scale, onChange, onRemove }) {
           <div className="text-[10px] uppercase tracking-wide text-gray-400 -mt-0.5">value</div>
         </div>
         <button
-          onClick={onRemove}
-          aria-label="Remove player"
+          onClick={onBench}
+          aria-label={`Remove ${player.name || 'player'} from trade`}
+          title="Remove from trade (kept below for easy re-add)"
+          className="shrink-0 text-xs text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 border border-gray-200 dark:border-gray-700 rounded px-2 py-1"
+        >
+          Remove
+        </button>
+        <button
+          onClick={onDelete}
+          aria-label={`Delete ${player.name || 'player'} completely`}
+          title="Delete completely"
           className="shrink-0 text-gray-300 dark:text-gray-600 hover:text-red-500 text-lg leading-none px-1"
         >
           ×
@@ -113,13 +100,13 @@ function PlayerRow({ player, scale, onChange, onRemove }) {
   );
 }
 
-function TradeSide({ side, scale, onChange }) {
+function TradeSide({ side, scale, onChange, onBench }) {
   const setPlayer = (i, p) => {
     const players = side.players.slice();
     players[i] = p;
     onChange({ ...side, players });
   };
-  const removePlayer = (i) =>
+  const deletePlayer = (i) =>
     onChange({ ...side, players: side.players.filter((_, j) => j !== i) });
   const addPlayer = () =>
     onChange({ ...side, players: [...side.players, { ...EMPTY_PLAYER }] });
@@ -133,7 +120,8 @@ function TradeSide({ side, scale, onChange }) {
           player={p}
           scale={scale}
           onChange={(np) => setPlayer(i, np)}
-          onRemove={() => removePlayer(i)}
+          onBench={() => onBench(i)}
+          onDelete={() => deletePlayer(i)}
         />
       ))}
       <button
@@ -147,13 +135,37 @@ function TradeSide({ side, scale, onChange }) {
 }
 
 export function TradeAnalyzer() {
-  const [form, setForm] = useState(loadSaved);
+  const [form, setForm] = useState(loadTradeState);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
-    } catch { /* storage full/blocked — analysis still works */ }
+    saveTradeState(form);
   }, [form]);
+
+  // Remove from the trade but keep on the bench for easy re-add.
+  const benchPlayer = (sideKey, i) =>
+    setForm((f) => {
+      const side = f[sideKey];
+      const player = side.players[i];
+      return {
+        ...f,
+        [sideKey]: { ...side, players: side.players.filter((_, j) => j !== i) },
+        bench: [...f.bench, { ...player, side: sideKey }],
+      };
+    });
+
+  const reAddPlayer = (i) =>
+    setForm((f) => {
+      const { side = 'sideA', ...player } = f.bench[i];
+      const target = f[side];
+      return {
+        ...f,
+        [side]: { ...target, players: [...target.players, player] },
+        bench: f.bench.filter((_, j) => j !== i),
+      };
+    });
+
+  const deleteBenched = (i) =>
+    setForm((f) => ({ ...f, bench: f.bench.filter((_, j) => j !== i) }));
 
   const totalA = useMemo(() => sideTotal(form.sideA.players, form.scale), [form]);
   const totalB = useMemo(() => sideTotal(form.sideB.players, form.scale), [form]);
@@ -204,15 +216,55 @@ export function TradeAnalyzer() {
       {/* Two sides */}
       <div className="grid gap-6 lg:grid-cols-2">
         <Section title={`${form.sideA.label} — ${totalA} pts`}>
-          <TradeSide side={form.sideA} scale={form.scale} onChange={(s) => setForm((f) => ({ ...f, sideA: s }))} />
+          <TradeSide side={form.sideA} scale={form.scale} onChange={(s) => setForm((f) => ({ ...f, sideA: s }))} onBench={(i) => benchPlayer('sideA', i)} />
         </Section>
         <Section title={`${form.sideB.label} — ${totalB} pts`}>
-          <TradeSide side={form.sideB} scale={form.scale} onChange={(s) => setForm((f) => ({ ...f, sideB: s }))} />
+          <TradeSide side={form.sideB} scale={form.scale} onChange={(s) => setForm((f) => ({ ...f, sideB: s }))} onBench={(i) => benchPlayer('sideB', i)} />
         </Section>
       </div>
 
+      {/* Bench — removed players, one click to put back */}
+      {form.bench.length > 0 && (
+        <Section
+          title="Removed from trade"
+          subtitle="Kept here so they're easy to re-add. × deletes them for good."
+        >
+          <ul className="flex flex-wrap gap-2">
+            {form.bench.map((p, i) => {
+              const { value } = playerTradeValue(p, form.scale);
+              return (
+                <li
+                  key={i}
+                  className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 pl-3 pr-1 py-1.5 text-sm"
+                >
+                  <span className="text-gray-900 dark:text-gray-100 font-medium">
+                    {p.name || 'Unnamed'}
+                  </span>
+                  <span className="text-xs tabular-nums text-gray-400">
+                    {value === null ? '—' : `${value} pts`}
+                  </span>
+                  <button
+                    onClick={() => reAddPlayer(i)}
+                    className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    Re-add to {form[p.side ?? 'sideA']?.label ?? 'trade'}
+                  </button>
+                  <button
+                    onClick={() => deleteBenched(i)}
+                    aria-label={`Delete ${p.name || 'player'} from bench`}
+                    className="text-gray-300 dark:text-gray-600 hover:text-red-500 text-base leading-none px-1"
+                  >
+                    ×
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </Section>
+      )}
+
       <div className="text-center">
-        <button onClick={() => setForm(EMPTY)} className="text-sm text-gray-400 hover:text-red-500">
+        <button onClick={() => setForm(emptyTradeState())} className="text-sm text-gray-400 hover:text-red-500">
           Clear trade
         </button>
       </div>

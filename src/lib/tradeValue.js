@@ -61,10 +61,13 @@ export function defaultControlYears(level) {
   return level === 'mlb' ? 3 : 6;
 }
 
-// player: { ovr, pot, age, level, controlYears, salary, injury } (raw form values)
+// player: { ovr, pot, age, level, controlYears, salary, injury } (raw form
+// values). Players pushed in from the evaluators carry their own scale
+// (computed grades are always 20-80) — it wins over the trade's scale.
 export function playerTradeValue(player, scale) {
-  const ovr = to2080(player.ovr, scale);
-  const pot = to2080(player.pot, scale);
+  const scaleUsed = player.scale ?? scale;
+  const ovr = to2080(player.ovr, scaleUsed);
+  const pot = to2080(player.pot, scaleUsed);
   const age = num(player.age) ?? 25;
   const level = player.level ?? 'mlb';
   const control = num(player.controlYears) ?? defaultControlYears(level);

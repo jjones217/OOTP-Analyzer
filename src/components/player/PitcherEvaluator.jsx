@@ -9,6 +9,7 @@ import {
 } from '../../lib/pitchingEvaluation';
 import { RadarChart } from './RadarChart';
 import { NumInput, TextInput, SelectInput, Section } from './formControls';
+import { AddToTrade } from './AddToTrade';
 
 const STORAGE_KEY = 'ootp-pitcher-eval';
 
@@ -230,6 +231,21 @@ export function PitcherEvaluator() {
                 Run prevention (ERA/FIP/WHIP): <span className="font-semibold tabular-nums text-gray-600 dark:text-gray-300">{fmt(results)}</span> — folded into the OVR at 15%.
               </p>
             )}
+
+            <AddToTrade
+              player={{
+                name: form.info.name,
+                ovr: overall === null ? '' : String(overall),
+                pot: potOverall === null ? '' : String(potOverall),
+                age: form.info.age,
+                level: form.info.level,
+                controlYears: '',
+                salary: '',
+                injury: 'normal',
+                scale: '20-80',
+              }}
+              disabled={overall === null}
+            />
           </section>
 
           <section className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
