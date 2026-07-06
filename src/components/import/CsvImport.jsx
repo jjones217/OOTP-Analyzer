@@ -164,6 +164,7 @@ export function CsvImport({ onLoaded }) {
                       {s.age && ` · ${s.age} yrs`}
                       {' · '}
                       {LEAGUE_LEVELS.find((l) => l.id === s.level)?.label ?? s.level}
+                      {s.war && ` · ${s.war} WAR`}
                     </div>
                   </div>
                   <div className="text-right shrink-0 w-24">

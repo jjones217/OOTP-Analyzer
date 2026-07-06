@@ -108,7 +108,15 @@ export function computePitchAbility(stats, level, tools) {
   const offset = LEAGUE_LEVELS.find((l) => l.id === level)?.offset ?? 0;
   const adj = (g) => (g === null ? null : clamp(g + offset));
 
-  const ip = num(stats.ip);
+  // IP uses baseball notation: .1/.2 are thirds of an inning (115.2 = 115⅔).
+  const ipRaw = num(stats.ip);
+  let ip = ipRaw;
+  if (ipRaw !== null) {
+    const whole = Math.trunc(ipRaw);
+    const frac = Math.round((ipRaw - whole) * 10);
+    if (frac === 1) ip = whole + 1 / 3;
+    else if (frac === 2) ip = whole + 2 / 3;
+  }
   const g = num(stats.g);
   const gs = num(stats.gs);
   const k = num(stats.k);
