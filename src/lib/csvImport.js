@@ -4,7 +4,7 @@
 // so it can be saved, loaded into a card, or sent to a trade like any
 // hand-entered player.
 import Papa from 'papaparse';
-import { evaluatePlayer, POSITIONS } from './evaluation.js';
+import { evaluatePlayer, POSITIONS, FIELD_POSITIONS } from './evaluation.js';
 import { evaluatePitcher, PITCHER_ROLES } from './pitchingEvaluation.js';
 
 const norm = (h) => String(h ?? '').toLowerCase().replace(/[^a-z0-9+%-]/g, '');
@@ -23,15 +23,16 @@ const INFO_PREFS = {
 
 const BATTER_RATING_PREFS = {
   contact: ['con', 'contact'], contactPot: ['conp', 'contactpot'],
-  babip: ['babip'], babipPot: ['babipp'],
-  avoidK: ['ks', 'avoidk', 'avoidks'], avoidKPot: ['ksp', 'avoidkp'],
+  babip: ['babip'], babipPot: ['babipp', 'htp'],
+  avoidK: ['ks', 'avoidk', 'avoidks'], avoidKPot: ['ksp', 'kp', 'avoidkp'],
   gap: ['gap'], gapPot: ['gapp'],
   power: ['pow', 'power'], powerPot: ['powp', 'powerp'],
   eye: ['eye'], eyePot: ['eyep'],
   speed: ['spe', 'spd', 'speed'],
+  stlAggr: ['sr', 'stlaggr'],
   stealing: ['ste', 'stl', 'stealing'],
   baserunning: ['run', 'bsr', 'baserunning'],
-  sacBunt: ['sac', 'sacbunt'], buntForHit: ['bfh', 'buntforhit'],
+  sacBunt: ['bun', 'sac', 'sacbunt'], buntForHit: ['bfh', 'buntforhit'],
 };
 
 const BATTER_FIELDING_PREFS = {
@@ -42,7 +43,7 @@ const BATTER_FIELDING_PREFS = {
 };
 
 const BATTER_STAT_PREFS = {
-  pa: ['pa'], hits: ['h', 'hits'], doubles: ['2b'], triples: ['3b'], hr: ['hr'],
+  pa: ['pa'], hits: ['h', 'hits'], doubles: ['2b1', '2b'], triples: ['3b1', '3b'], hr: ['hr'],
   bb: ['bb'], k: ['so', 'k'],
   avg: ['avg', 'ba'], obp: ['obp'], slg: ['slg'],
   wrcPlus: ['wrc+', 'wrcplus', 'wrc'],
@@ -58,17 +59,26 @@ const PITCHER_RATING_PREFS = {
 };
 
 const PITCHER_OTHER_PREFS = {
-  stamina: ['sta', 'stamina'],
-  velocity: ['vel', 'velo', 'velocity'],
-  gbPct: ['gb', 'gb%'],
+  stamina: ['sta', 'stm', 'stamina'],
+  velocity: ['vel', 'velo', 'vt', 'velocity'],
+  gbPct: ['gb', 'gb%', 'gf'],
   hold: ['hld', 'hold'],
 };
+
+// The G/F column is text ("EX GB", "NEU", ...) — translate to a GB% guess.
+const GB_TYPE = { exgb: 62, gb: 54, neu: 45, fb: 38, exfb: 32 };
+function gbValue(raw) {
+  if (raw === '') return '';
+  if (Number.isFinite(Number(raw))) return raw;
+  const mapped = GB_TYPE[norm(raw)];
+  return mapped === undefined ? '' : String(mapped);
+}
 
 const PITCH_BASE = {
   fastball: ['fb', 'fastball'], sinker: ['si', 'snk', 'sinker'],
   cutter: ['ct', 'cutter'], slider: ['sl', 'slider'],
   curveball: ['cb', 'cu', 'curveball'], changeup: ['ch', 'changeup'],
-  splitter: ['spl', 'splitter'], forkball: ['fo', 'forkball'],
+  splitter: ['spl', 'sp', 'splitter'], forkball: ['fo', 'forkball'],
   circlechange: ['cc', 'circlechange'], screwball: ['sc', 'screwball'],
   knucklecurve: ['kc', 'knucklecurve'], knuckleball: ['kn', 'knuckleball'],
 };
@@ -78,6 +88,18 @@ const PITCH_PREFS = {
     Object.entries(PITCH_BASE).map(([key, aliases]) => [`${key}Pot`, aliases.map((a) => `${a}p`)])
   ),
 };
+
+const WAR_PREFS = { war: ['war'] };
+
+// Position-rating columns: a bare position header ("SS") plus "SS Pot".
+// "2B"/"3B" also name the doubles/triples stats — when both appear, papaparse
+// suffixes the later duplicate to "2B_1", which the stat prefs prefer.
+const POS_RATING_PREFS = Object.fromEntries(
+  FIELD_POSITIONS.flatMap((pos) => [
+    [pos, [norm(pos)]],
+    [`${pos}Pot`, [`${norm(pos)}pot`]],
+  ])
+);
 
 const PITCHER_STAT_PREFS = {
   ip: ['ip'], g: ['g'], gs: ['gs'], k: ['so', 'k'], bb: ['bb'], hr: ['hr'],
@@ -99,7 +121,9 @@ const PITCHER_POS = new Set(['p', 'sp', 'rp', 'cl', 'mr']);
 const val = (row, rawKey) => {
   if (rawKey === undefined) return '';
   const v = row[rawKey];
-  return v === null || v === undefined ? '' : String(v).trim();
+  if (v === null || v === undefined) return '';
+  const t = String(v).trim();
+  return t === '-' ? '' : t; // OOTP prints '-' for hidden/absent ratings
 };
 
 // Build header lookup: our-field-key → raw CSV header, taking each key's
@@ -153,9 +177,18 @@ export function parsePlayersCsv(text, { scale = '20-80', defaultLevel = 'mlb' } 
   const pOther = mapHeaders(fields, PITCHER_OTHER_PREFS);
   const pStats = mapHeaders(fields, PITCHER_STAT_PREFS);
   const pitches = mapHeaders(fields, PITCH_PREFS);
+  const posRatingCols = mapHeaders(fields, POS_RATING_PREFS);
+  const warCol = mapHeaders(fields, WAR_PREFS);
+
+  // Without the "X Pot" columns there's no position-rating block, so a bare
+  // "2B"/"3B" header is the doubles/triples stat, not a position rating.
+  const hasPosBlock = FIELD_POSITIONS.some((pos) => posRatingCols[`${pos}Pot`] !== undefined);
+  if (!hasPosBlock) {
+    for (const pos of FIELD_POSITIONS) delete posRatingCols[pos];
+  }
 
   const recognized = new Set(
-    [info, bRatings, bFielding, bStats, pRatings, pOther, pStats, pitches].flatMap((m) => Object.values(m))
+    [info, bRatings, bFielding, bStats, pRatings, pOther, pStats, pitches, posRatingCols, warCol].flatMap((m) => Object.values(m))
   );
   const unmapped = fields.filter((f) => !recognized.has(f));
 
@@ -179,6 +212,7 @@ export function parsePlayersCsv(text, { scale = '20-80', defaultLevel = 'mlb' } 
         pitches: pick(row, pitches, Object.keys(PITCH_PREFS)),
         other: pick(row, pOther, ['velocity', 'gbPct', 'stamina', 'hold']),
       };
+      form.other.gbPct = gbValue(form.other.gbPct);
       const evaluation = evaluatePitcher(form);
       players.push({
         type: 'pitcher',
@@ -190,6 +224,7 @@ export function parsePlayersCsv(text, { scale = '20-80', defaultLevel = 'mlb' } 
           level,
           ovr: evaluation.overall,
           pot: evaluation.potOverall,
+          war: val(row, warCol.war),
         },
       });
     } else {
@@ -201,7 +236,12 @@ export function parsePlayersCsv(text, { scale = '20-80', defaultLevel = 'mlb' } 
         stats: pick(row, bStats, BATTER_STAT_KEYS),
         ratings: pick(row, bRatings, BATTER_RATING_KEYS),
         fielding: pick(row, bFielding, BATTER_FIELDING_KEYS),
-        posRatings: {},
+        posRatings: Object.fromEntries(
+          FIELD_POSITIONS.map((pos) => [
+            pos,
+            { ovr: val(row, posRatingCols[pos]), pot: val(row, posRatingCols[`${pos}Pot`]) },
+          ])
+        ),
       };
       const evaluation = evaluatePlayer(form);
       players.push({
@@ -214,6 +254,7 @@ export function parsePlayersCsv(text, { scale = '20-80', defaultLevel = 'mlb' } 
           level,
           ovr: evaluation.overall,
           pot: evaluation.potOverall,
+          war: val(row, warCol.war),
         },
       });
     }
