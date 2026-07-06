@@ -10,6 +10,7 @@ import {
 import { RadarChart } from './RadarChart';
 import { NumInput, TextInput, SelectInput, Section } from './formControls';
 import { AddToTrade } from './AddToTrade';
+import { savePlayer } from '../../lib/savedPlayers';
 
 const STORAGE_KEY = 'ootp-pitcher-eval';
 
@@ -245,6 +246,20 @@ export function PitcherEvaluator() {
                 scale: '20-80',
               }}
               disabled={overall === null}
+              onSave={() =>
+                savePlayer({
+                  type: 'pitcher',
+                  form,
+                  summary: {
+                    name: form.info.name,
+                    detail: PITCHER_ROLES.find((r) => r.id === form.info.role)?.label ?? 'SP',
+                    age: form.info.age,
+                    level: form.info.level,
+                    ovr: overall,
+                    pot: potOverall,
+                  },
+                })
+              }
             />
           </section>
 

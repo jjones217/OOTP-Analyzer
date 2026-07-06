@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { BatterEvaluator } from './BatterEvaluator';
 import { PitcherEvaluator } from './PitcherEvaluator';
+import { SavedPlayers } from './SavedPlayers';
 import { TradeAnalyzer } from '../trade/TradeAnalyzer';
 
 const MODE_KEY = 'ootp-eval-mode';
-const MODES = ['batter', 'pitcher', 'trade'];
+const MODES = ['batter', 'pitcher', 'trade', 'saved'];
 
 export function PlayerEvaluator() {
   const [mode, setMode] = useState(() => {
@@ -15,6 +16,9 @@ export function PlayerEvaluator() {
       return 'batter';
     }
   });
+  // Bumped when a saved player is loaded, so the target evaluator remounts
+  // and re-reads its localStorage even if it was already the active tab.
+  const [loadKey, setLoadKey] = useState(0);
 
   useEffect(() => {
     try {
@@ -22,11 +26,16 @@ export function PlayerEvaluator() {
     } catch { /* non-fatal */ }
   }, [mode]);
 
+  const handleLoaded = (type) => {
+    setMode(type);
+    setLoadKey((k) => k + 1);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-center">
         <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-sm font-medium">
-          {[['batter', 'Batter'], ['pitcher', 'Pitcher'], ['trade', 'Trade']].map(([id, label]) => (
+          {[['batter', 'Batter'], ['pitcher', 'Pitcher'], ['trade', 'Trade'], ['saved', 'Saved']].map(([id, label]) => (
             <button
               key={id}
               onClick={() => setMode(id)}
@@ -41,7 +50,15 @@ export function PlayerEvaluator() {
           ))}
         </div>
       </div>
-      {mode === 'trade' ? <TradeAnalyzer /> : mode === 'pitcher' ? <PitcherEvaluator /> : <BatterEvaluator />}
+      {mode === 'trade' ? (
+        <TradeAnalyzer />
+      ) : mode === 'saved' ? (
+        <SavedPlayers onLoaded={handleLoaded} />
+      ) : mode === 'pitcher' ? (
+        <PitcherEvaluator key={`p${loadKey}`} />
+      ) : (
+        <BatterEvaluator key={`b${loadKey}`} />
+      )}
     </div>
   );
 }

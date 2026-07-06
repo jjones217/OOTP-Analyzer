@@ -12,6 +12,7 @@ import {
 import { RadarChart } from './RadarChart';
 import { NumInput, Section } from './formControls';
 import { AddToTrade } from './AddToTrade';
+import { savePlayer } from '../../lib/savedPlayers';
 
 const STORAGE_KEY = 'ootp-player-eval';
 
@@ -320,6 +321,20 @@ export function BatterEvaluator() {
                 scale: '20-80',
               }}
               disabled={overall === null}
+              onSave={() =>
+                savePlayer({
+                  type: 'batter',
+                  form,
+                  summary: {
+                    name: form.info.name,
+                    detail: form.info.position,
+                    age: form.info.age,
+                    level: form.info.level,
+                    ovr: overall,
+                    pot: potOverall,
+                  },
+                })
+              }
             />
           </section>
 
