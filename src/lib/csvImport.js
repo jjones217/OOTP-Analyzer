@@ -163,7 +163,10 @@ const PITCHER_RATING_KEYS = ['stuff', 'stuffPot', 'movement', 'movementPot', 'hr
 const PITCHER_STAT_KEYS = ['ip', 'g', 'gs', 'k', 'bb', 'hr', 'era', 'fip', 'fipMinus', 'whip'];
 
 export function parsePlayersCsv(text, { scale = '20-80', defaultLevel = 'mlb' } = {}) {
-  const parsed = Papa.parse(text.trim(), { header: true, skipEmptyLines: true });
+  // Normalize line endings — pasted text can mix CRLF and LF, which throws
+  // off papaparse's newline detection.
+  const cleaned = text.replace(/\r\n?/g, '\n').trim();
+  const parsed = Papa.parse(cleaned, { header: true, skipEmptyLines: true });
   const fields = parsed.meta?.fields ?? [];
   if (fields.length < 2 || parsed.data.length === 0) {
     return { players: [], unmapped: [], errors: ['Could not find a header row and data rows in that CSV.'] };

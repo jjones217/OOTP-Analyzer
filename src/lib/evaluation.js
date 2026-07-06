@@ -345,9 +345,12 @@ function rawPosScore(pos, f, r) {
   }
 }
 
-// posRatings: { C: { ovr, pot }, ... } on the input scale.
-export function recommendPositions(f, r, posRatings, scale) {
-  const results = [];
+// Fit at every position: { [pos]: { fit, fitPot } }, positions with no
+// signal omitted. Current fit uses the in-game current rating; potential
+// fit uses the in-game potential (the computed fielding score has no
+// potential inputs, so it anchors both).
+export function positionFits(f, r, posRatings, scale) {
+  const fits = {};
   for (const pos of FIELD_POSITIONS) {
     const raw = rawPosScore(pos, f, r);
     const computed = raw === null ? null : Math.max(20, raw - requirementPenalty(pos, f));
@@ -355,9 +358,6 @@ export function recommendPositions(f, r, posRatings, scale) {
     const ovr = to2080(entered?.ovr, scale);
     const pot = to2080(entered?.pot, scale);
 
-    // Current fit uses the in-game current rating; potential fit uses the
-    // in-game potential (the computed fielding score has no potential
-    // inputs, so it anchors both).
     const combine = (rating) => {
       if (computed !== null && rating !== null) return computed * 0.45 + rating * 0.55;
       if (computed !== null) return computed;
@@ -366,7 +366,15 @@ export function recommendPositions(f, r, posRatings, scale) {
     const fit = combine(ovr);
     const fitPot = combine(pot ?? ovr);
     if (fit === null) continue;
+    fits[pos] = { fit, fitPot };
+  }
+  return fits;
+}
 
+// posRatings: { C: { ovr, pot }, ... } on the input scale.
+export function recommendPositions(f, r, posRatings, scale) {
+  const results = [];
+  for (const [pos, { fit, fitPot }] of Object.entries(positionFits(f, r, posRatings, scale))) {
     // Rank by fit plus a positional-value bonus that only applies when the
     // player can actually handle the spot (fades below fit 45, flips to a
     // penalty for a bad fit at a hard position). Potential counts half —
