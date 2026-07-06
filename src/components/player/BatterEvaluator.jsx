@@ -294,14 +294,19 @@ export function BatterEvaluator() {
                 <p className="text-xs text-gray-400 mt-1">Enter fielding or position ratings to get recommendations.</p>
               ) : (
                 <ol className="mt-2 flex gap-2">
-                  {recPositions.map(({ pos, fit }, i) => (
+                  {recPositions.map(({ pos, fit, fitPot }, i) => (
                     <li
                       key={pos}
                       className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-center"
                     >
                       <div className="text-[10px] text-gray-400">#{i + 1}</div>
                       <div className="text-base font-bold text-gray-900 dark:text-gray-100">{pos}</div>
-                      <div className="text-[10px] text-gray-400">fit {fit}</div>
+                      <div className="text-[10px] text-gray-400">
+                        fit {fit}
+                        {fitPot !== null && fitPot !== fit && (
+                          <> · <span className="text-blue-600 dark:text-blue-400">pot {fitPot}</span></>
+                        )}
+                      </div>
                     </li>
                   ))}
                 </ol>

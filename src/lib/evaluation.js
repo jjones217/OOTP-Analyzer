@@ -288,18 +288,29 @@ export function gradeLabel(ovr) {
 // bonus in the ranking (scaled by how well he actually fits there).
 const POS_VALUE = { C: 8, SS: 8, CF: 6, '2B': 4, '3B': 4, RF: 2, LF: 0, '1B': -6 };
 
-// Minimum arm grade a position realistically demands. An arm below the bar
-// docks the computed fit hard — great range can't cover for a 20 arm at SS.
-const ARM_REQ = { C: 50, SS: 50, '3B': 55, RF: 55, CF: 45, '2B': 40, LF: 40, '1B': 30 };
-const ARM_FOR_POS = {
-  C: 'cArm', SS: 'ifArm', '2B': 'ifArm', '3B': 'ifArm', '1B': 'ifArm',
-  LF: 'ofArm', CF: 'ofArm', RF: 'ofArm',
+// Minimum grades a position realistically demands in its key skills.
+// Any entered rating below its bar docks the computed fit hard — great
+// range can't cover for a 20 arm or a 45 double-play pivot at SS. Ratings
+// left blank are treated as unknown, not deficient.
+const POS_REQS = {
+  C: { cArm: 50, cBlk: 45 },
+  SS: { ifArm: 50, ifRng: 55, ifDp: 50 },
+  '2B': { ifArm: 40, ifRng: 45, ifDp: 50 },
+  '3B': { ifArm: 55, ifRng: 40 },
+  '1B': { ifArm: 30 },
+  CF: { ofArm: 45, ofRng: 55 },
+  RF: { ofArm: 55, ofRng: 40 },
+  LF: { ofArm: 40, ofRng: 40 },
 };
 
-function armPenalty(pos, f) {
-  const arm = f[ARM_FOR_POS[pos]];
-  if (arm == null) return 0;
-  return Math.max(0, (ARM_REQ[pos] ?? 0) - arm) * 1.2;
+function requirementPenalty(pos, f) {
+  let penalty = 0;
+  for (const [key, req] of Object.entries(POS_REQS[pos] ?? {})) {
+    const val = f[key];
+    if (val == null) continue;
+    penalty += Math.max(0, req - val) * 1.2;
+  }
+  return penalty;
 }
 
 // A position only gets a computed score if the anchor rating for its
@@ -339,28 +350,36 @@ export function recommendPositions(f, r, posRatings, scale) {
   const results = [];
   for (const pos of FIELD_POSITIONS) {
     const raw = rawPosScore(pos, f, r);
-    const computed = raw === null ? null : Math.max(20, raw - armPenalty(pos, f));
+    const computed = raw === null ? null : Math.max(20, raw - requirementPenalty(pos, f));
     const entered = posRatings?.[pos];
     const ovr = to2080(entered?.ovr, scale);
     const pot = to2080(entered?.pot, scale);
-    const gameRating = wMean([[ovr, 0.5], [pot, 0.5]]);
 
-    let fit = null;
-    if (computed !== null && gameRating !== null) {
-      fit = computed * 0.45 + gameRating * 0.55;
-    } else if (computed !== null) {
-      fit = computed;
-    } else if (gameRating !== null) {
-      fit = gameRating;
-    }
+    // Current fit uses the in-game current rating; potential fit uses the
+    // in-game potential (the computed fielding score has no potential
+    // inputs, so it anchors both).
+    const combine = (rating) => {
+      if (computed !== null && rating !== null) return computed * 0.45 + rating * 0.55;
+      if (computed !== null) return computed;
+      return rating;
+    };
+    const fit = combine(ovr);
+    const fitPot = combine(pot ?? ovr);
     if (fit === null) continue;
 
     // Rank by fit plus a positional-value bonus that only applies when the
     // player can actually handle the spot (fades below fit 45, flips to a
-    // penalty for a bad fit at a hard position).
-    const competence = Math.max(-1, Math.min(1, (fit - 45) / 15));
-    const score = fit + (POS_VALUE[pos] ?? 0) * competence;
-    results.push({ pos, score, fit: Math.round(fit) });
+    // penalty for a bad fit at a hard position). Potential counts half —
+    // where he could end up matters, but what he is now matters more.
+    const rankFit = fitPot !== null ? fit * 0.67 + fitPot * 0.33 : fit;
+    const competence = Math.max(-1, Math.min(1, (rankFit - 45) / 15));
+    const score = rankFit + (POS_VALUE[pos] ?? 0) * competence;
+    results.push({
+      pos,
+      score,
+      fit: Math.round(fit),
+      fitPot: fitPot === null ? null : Math.round(fitPot),
+    });
   }
   results.sort((a, b) => b.score - a.score);
   return results.slice(0, 3);

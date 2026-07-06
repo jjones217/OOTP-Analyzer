@@ -3,9 +3,10 @@ import { BatterEvaluator } from './BatterEvaluator';
 import { PitcherEvaluator } from './PitcherEvaluator';
 import { SavedPlayers } from './SavedPlayers';
 import { TradeAnalyzer } from '../trade/TradeAnalyzer';
+import { CsvImport } from '../import/CsvImport';
 
 const MODE_KEY = 'ootp-eval-mode';
-const MODES = ['batter', 'pitcher', 'trade', 'saved'];
+const MODES = ['batter', 'pitcher', 'trade', 'saved', 'import'];
 
 export function PlayerEvaluator() {
   const [mode, setMode] = useState(() => {
@@ -35,7 +36,7 @@ export function PlayerEvaluator() {
     <div className="space-y-6">
       <div className="flex justify-center">
         <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-sm font-medium">
-          {[['batter', 'Batter'], ['pitcher', 'Pitcher'], ['trade', 'Trade'], ['saved', 'Saved']].map(([id, label]) => (
+          {[['batter', 'Batter'], ['pitcher', 'Pitcher'], ['trade', 'Trade'], ['saved', 'Saved'], ['import', 'Import']].map(([id, label]) => (
             <button
               key={id}
               onClick={() => setMode(id)}
@@ -52,6 +53,8 @@ export function PlayerEvaluator() {
       </div>
       {mode === 'trade' ? (
         <TradeAnalyzer />
+      ) : mode === 'import' ? (
+        <CsvImport onLoaded={handleLoaded} />
       ) : mode === 'saved' ? (
         <SavedPlayers onLoaded={handleLoaded} />
       ) : mode === 'pitcher' ? (
