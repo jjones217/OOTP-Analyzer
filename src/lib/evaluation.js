@@ -288,18 +288,29 @@ export function gradeLabel(ovr) {
 // bonus in the ranking (scaled by how well he actually fits there).
 const POS_VALUE = { C: 8, SS: 8, CF: 6, '2B': 4, '3B': 4, RF: 2, LF: 0, '1B': -6 };
 
-// Minimum arm grade a position realistically demands. An arm below the bar
-// docks the computed fit hard — great range can't cover for a 20 arm at SS.
-const ARM_REQ = { C: 50, SS: 50, '3B': 55, RF: 55, CF: 45, '2B': 40, LF: 40, '1B': 30 };
-const ARM_FOR_POS = {
-  C: 'cArm', SS: 'ifArm', '2B': 'ifArm', '3B': 'ifArm', '1B': 'ifArm',
-  LF: 'ofArm', CF: 'ofArm', RF: 'ofArm',
+// Minimum grades a position realistically demands in its key skills.
+// Any entered rating below its bar docks the computed fit hard — great
+// range can't cover for a 20 arm or a 45 double-play pivot at SS. Ratings
+// left blank are treated as unknown, not deficient.
+const POS_REQS = {
+  C: { cArm: 50, cBlk: 45 },
+  SS: { ifArm: 50, ifRng: 55, ifDp: 50 },
+  '2B': { ifArm: 40, ifRng: 45, ifDp: 50 },
+  '3B': { ifArm: 55, ifRng: 40 },
+  '1B': { ifArm: 30 },
+  CF: { ofArm: 45, ofRng: 55 },
+  RF: { ofArm: 55, ofRng: 40 },
+  LF: { ofArm: 40, ofRng: 40 },
 };
 
-function armPenalty(pos, f) {
-  const arm = f[ARM_FOR_POS[pos]];
-  if (arm == null) return 0;
-  return Math.max(0, (ARM_REQ[pos] ?? 0) - arm) * 1.2;
+function requirementPenalty(pos, f) {
+  let penalty = 0;
+  for (const [key, req] of Object.entries(POS_REQS[pos] ?? {})) {
+    const val = f[key];
+    if (val == null) continue;
+    penalty += Math.max(0, req - val) * 1.2;
+  }
+  return penalty;
 }
 
 // A position only gets a computed score if the anchor rating for its
@@ -339,7 +350,7 @@ export function recommendPositions(f, r, posRatings, scale) {
   const results = [];
   for (const pos of FIELD_POSITIONS) {
     const raw = rawPosScore(pos, f, r);
-    const computed = raw === null ? null : Math.max(20, raw - armPenalty(pos, f));
+    const computed = raw === null ? null : Math.max(20, raw - requirementPenalty(pos, f));
     const entered = posRatings?.[pos];
     const ovr = to2080(entered?.ovr, scale);
     const pot = to2080(entered?.pot, scale);
