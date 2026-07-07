@@ -8,11 +8,24 @@ import {
   normalizeFielding,
   positionFits,
   to2080,
+  POS_VALUE,
 } from './evaluation.js';
 import { evaluatePitcher } from './pitchingEvaluation.js';
 
 // How much of a lineup slot's score is the bat vs the glove at that spot.
 const BAT_WEIGHT = 0.65;
+
+// Defensive-spectrum slides: a player rated at a harder position can handle
+// an easier one even with no rating there (OOTP only rates positions a
+// player has actually played). Never inferred uphill — a LF doesn't become
+// a SS. target: [[source, bonus], ...], inferred fit capped at 60.
+const DOWNHILL = {
+  '1B': [['SS', 6], ['2B', 5], ['3B', 5], ['CF', 4], ['C', 3], ['RF', 3], ['LF', 3]],
+  '2B': [['SS', 3]],
+  '3B': [['SS', 2], ['2B', 1]],
+  LF: [['CF', 5], ['RF', 2]],
+  RF: [['CF', 3]],
+};
 
 export function buildDepthChart(players) {
   const batters = [];
@@ -39,23 +52,37 @@ export function buildDepthChart(players) {
     }
   }
 
-  // Every (batter, position) candidacy. A batter with no fielding signal at
-  // a spot can still man his listed position at an assumed average fit.
+  // Every (batter, position) candidacy: explicit fit first, then a
+  // spectrum slide from a harder rated position, then (as a last resort)
+  // an assumed-average fit at the player's listed position.
   const candidates = [];
   for (const b of batters) {
     for (const pos of FIELD_POSITIONS) {
       let fit = b.fits[pos]?.fit ?? null;
       let assumed = false;
+      let inferred = false;
+      if (fit === null) {
+        for (const [src, bonus] of DOWNHILL[pos] ?? []) {
+          const sf = b.fits[src]?.fit;
+          if (sf === null || sf === undefined) continue;
+          const slid = Math.min(60, sf + bonus);
+          if (fit === null || slid > fit) fit = slid;
+        }
+        if (fit !== null) inferred = true;
+      }
       if (fit === null && b.listedPos === pos) {
         fit = 45;
         assumed = true;
       }
       if (fit === null) continue;
       const score = b.overall !== null ? BAT_WEIGHT * b.overall + (1 - BAT_WEIGHT) * fit : fit;
-      candidates.push({ b, pos, fit: Math.round(fit), assumed, score });
+      // Assignment rank includes positional value so a natural SS mans SS
+      // before sliding down the spectrum to an easier (higher-fit) spot.
+      const rank = score + (POS_VALUE[pos] ?? 0);
+      candidates.push({ b, pos, fit: Math.round(fit), assumed, inferred, score, rank });
     }
   }
-  candidates.sort((a, z) => z.score - a.score);
+  candidates.sort((a, z) => z.rank - a.rank);
 
   // Greedy global assignment: best remaining (player, position) pair wins.
   const starters = {};

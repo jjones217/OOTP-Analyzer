@@ -207,10 +207,16 @@ export function parsePlayersCsv(text, { scale = '20-80', defaultLevel = 'mlb' } 
 
     if (isPitcher) {
       const role = PITCHER_ROLES.some((r) => r.id === posRaw) ? posRaw : 'sp';
+      // A hitting export lists pitchers too, and its HR/BB/K columns are
+      // their *batting* stats — only read pitching stats from a file that
+      // actually looks like a pitching export.
+      const isPitchingFile = pStats.ip !== undefined || pStats.era !== undefined;
       const form = {
         scale,
         info: { name, role, age, level },
-        stats: pick(row, pStats, PITCHER_STAT_KEYS),
+        stats: isPitchingFile
+          ? pick(row, pStats, PITCHER_STAT_KEYS)
+          : Object.fromEntries(PITCHER_STAT_KEYS.map((k) => [k, ''])),
         ratings: pick(row, pRatings, PITCHER_RATING_KEYS),
         pitches: pick(row, pitches, Object.keys(PITCH_PREFS)),
         other: pick(row, pOther, ['velocity', 'gbPct', 'stamina', 'hold']),

@@ -286,7 +286,7 @@ export function gradeLabel(ovr) {
 // How much a position is worth on the defensive spectrum — a player who can
 // handle SS is more valuable there than at 1B, so premium positions get a
 // bonus in the ranking (scaled by how well he actually fits there).
-const POS_VALUE = { C: 8, SS: 8, CF: 6, '2B': 4, '3B': 4, RF: 2, LF: 0, '1B': -6 };
+export const POS_VALUE = { C: 8, SS: 8, CF: 6, '2B': 4, '3B': 4, RF: 2, LF: 0, '1B': -6 };
 
 // Minimum grades a position realistically demands in its key skills.
 // Any entered rating below its bar docks the computed fit hard — great
