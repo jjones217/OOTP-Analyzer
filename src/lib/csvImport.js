@@ -103,7 +103,7 @@ const POS_RATING_PREFS = Object.fromEntries(
 
 const PITCHER_STAT_PREFS = {
   ip: ['ip'], g: ['g'], gs: ['gs'], k: ['so', 'k'], bb: ['bb'], hr: ['hr'],
-  era: ['era'], fip: ['fip'], fipMinus: ['fip-', 'fipminus'],
+  era: ['era'], eraPlus: ['era+', 'eraplus'], fip: ['fip'], fipMinus: ['fip-', 'fipminus'],
   whip: ['whip'],
 };
 
@@ -160,7 +160,7 @@ const BATTER_RATING_KEYS = [
 const BATTER_FIELDING_KEYS = ['cArm', 'cBlk', 'cFrm', 'ifRng', 'ifErr', 'ifArm', 'ifDp', 'ofRng', 'ofErr', 'ofArm'];
 const BATTER_STAT_KEYS = ['pa', 'hits', 'doubles', 'triples', 'hr', 'bb', 'k', 'avg', 'obp', 'slg', 'wrcPlus', 'sb', 'cs'];
 const PITCHER_RATING_KEYS = ['stuff', 'stuffPot', 'movement', 'movementPot', 'hra', 'hraPot', 'pbabip', 'pbabipPot', 'control', 'controlPot'];
-const PITCHER_STAT_KEYS = ['ip', 'g', 'gs', 'k', 'bb', 'hr', 'era', 'fip', 'fipMinus', 'whip'];
+const PITCHER_STAT_KEYS = ['ip', 'g', 'gs', 'k', 'bb', 'hr', 'era', 'eraPlus', 'fip', 'fipMinus', 'whip'];
 
 export function parsePlayersCsv(text, { scale = '20-80', defaultLevel = 'mlb' } = {}) {
   // Normalize line endings — pasted text can mix CRLF and LF, which throws

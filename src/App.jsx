@@ -4,11 +4,20 @@
 // import { useLeagues } from './hooks/useLeagues';
 // import { LeagueCard } from './components/LeagueCard';
 // import { LeagueModal } from './components/LeagueModal';
+import { useState } from 'react';
 import { PlayerEvaluator } from './components/player/PlayerEvaluator';
 import { useTheme, THEMES } from './hooks/useTheme';
+import { getLeagueAdjusted, setLeagueAdjusted } from './lib/evalSettings';
 
 export default function App() {
   const [theme, setTheme] = useTheme();
+  const [adjusted, setAdjusted] = useState(getLeagueAdjusted);
+
+  const toggleAdjusted = () => {
+    const next = !adjusted;
+    setLeagueAdjusted(next);
+    setAdjusted(next);
+  };
   // const { leagues, loading, addLeague, updateLeague, removeLeague } = useLeagues();
   // const [modal, setModal] = useState(null); // null | { mode: 'add' } | { mode: 'edit', league }
   // const [view, setView] = useState('leagues'); // 'leagues' | 'evaluator'
@@ -71,6 +80,22 @@ export default function App() {
             </button>
           )} */}
 
+          <div className="flex items-center gap-3">
+          {/* League-adjusted grading toggle */}
+          <button
+            onClick={toggleAdjusted}
+            aria-pressed={adjusted}
+            title="Grade stats relative to the league (wRC+, FIP-, ERA+) instead of raw MLB benchmarks. Turn on for stats-only leagues or leagues whose run environment differs from modern MLB."
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border ${
+              adjusted
+                ? 'border-blue-600 bg-blue-600 text-white'
+                : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+            }`}
+          >
+            <span className={`w-2 h-2 rounded-full ${adjusted ? 'bg-white' : 'bg-gray-300 dark:bg-gray-600'}`} />
+            League-adjusted: {adjusted ? 'On' : 'Off'}
+          </button>
+
           {/* Theme toggle */}
           <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-xs font-medium" role="group" aria-label="Theme">
             {THEMES.map(({ id, label }) => (
@@ -88,15 +113,16 @@ export default function App() {
               </button>
             ))}
           </div>
+          </div>
         </div>
       </header>
 
       {/* Main */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <PlayerEvaluator />
+        <PlayerEvaluator key={adjusted ? 'league-adjusted' : 'raw'} />
         {/* Leagues view, parked:
         {view === 'evaluator' ? (
-          <PlayerEvaluator />
+          <PlayerEvaluator key={adjusted ? 'league-adjusted' : 'raw'} />
         ) : loading ? (
           <div className="flex items-center justify-center py-24 text-gray-400">
             Loading leagues…

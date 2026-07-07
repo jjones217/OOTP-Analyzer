@@ -17,7 +17,7 @@ const STORAGE_KEY = 'ootp-pitcher-eval';
 const EMPTY = {
   scale: '20-80',
   info: { name: '', role: 'sp', age: '', level: 'mlb' },
-  stats: { ip: '', g: '', gs: '', k: '', bb: '', hr: '', era: '', fip: '', fipMinus: '', whip: '' },
+  stats: { ip: '', g: '', gs: '', k: '', bb: '', hr: '', era: '', eraPlus: '', fip: '', fipMinus: '', whip: '' },
   ratings: {
     stuff: '', stuffPot: '', movement: '', movementPot: '', hra: '', hraPot: '',
     pbabip: '', pbabipPot: '', control: '', controlPot: '',
@@ -53,6 +53,7 @@ const STAT_FIELDS = [
   { key: 'bb', label: 'BB' },
   { key: 'hr', label: 'HR' },
   { key: 'era', label: 'ERA', step: 0.01, hint: '3.85' },
+  { key: 'eraPlus', label: 'ERA+', hint: '100' },
   { key: 'fip', label: 'FIP', step: 0.01, hint: '4.10' },
   { key: 'fipMinus', label: 'FIP−', hint: '100' },
   { key: 'whip', label: 'WHIP', step: 0.01, hint: '1.25' },
