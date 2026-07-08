@@ -19,7 +19,7 @@ const STORAGE_KEY = 'ootp-player-eval';
 const EMPTY = {
   scale: '20-80',
   info: { name: '', position: 'SS', age: '', level: 'mlb' },
-  stats: { pa: '', hits: '', doubles: '', triples: '', hr: '', bb: '', k: '', avg: '', obp: '', slg: '', wrcPlus: '', sb: '', cs: '' },
+  stats: { pa: '', hits: '', doubles: '', triples: '', hr: '', bb: '', k: '', avg: '', obp: '', slg: '', wrcPlus: '', sb: '', cs: '', war: '' },
   ratings: {
     contact: '', contactPot: '', babip: '', babipPot: '', avoidK: '', avoidKPot: '',
     gap: '', gapPot: '', power: '', powerPot: '', eye: '', eyePot: '',
@@ -67,6 +67,7 @@ const STAT_FIELDS = [
   { key: 'wrcPlus', label: 'wRC+' },
   { key: 'sb', label: 'SB' },
   { key: 'cs', label: 'CS' },
+  { key: 'war', label: 'WAR', step: 0.1, hint: '2.0' },
 ];
 
 // Batting ratings have current + potential in OOTP; running ratings don't.

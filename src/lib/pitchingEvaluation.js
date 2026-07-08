@@ -41,6 +41,8 @@ const ERA_PTS = [[2.5, 75], [3.0, 66], [3.5, 58], [4.0, 50], [4.5, 44], [5.5, 33
 const FIP_PTS = ERA_PTS;
 const FIPM_PTS = [[70, 72], [80, 64], [90, 57], [100, 50], [110, 44], [125, 35], [140, 27]];
 const ERAP_PTS = [[60, 25], [80, 40], [90, 45], [100, 50], [115, 58], [130, 65], [150, 72], [180, 80]];
+// Seasonal pitcher WAR → grade. A light kicker on the OVR, never the driver.
+const PWAR_PTS = [[-1, 30], [0, 40], [1, 47], [2, 53], [3, 60], [4, 66], [5, 72], [6, 77]];
 const WHIP_PTS = [[1.00, 72], [1.10, 64], [1.20, 56], [1.30, 50], [1.40, 43], [1.60, 32]];
 const IPGS_PTS = [[4.5, 40], [5.3, 48], [6.0, 56], [6.7, 64], [7.3, 72]];
 const VELO_PTS = [[88, 30], [91, 40], [93, 48], [95, 55], [97, 63], [99, 72], [101, 80]];
@@ -201,7 +203,7 @@ const ROLE_WEIGHTS = {
   cl: { stuff: 0.40, movement: 0.27, control: 0.25, arsenal: 0.06, stamina: 0.02 },
 };
 
-export function computePitchOverall(blended, role, results = null) {
+export function computePitchOverall(blended, role, results = null, { warGrade = null } = {}) {
   const w = ROLE_WEIGHTS[role] ?? ROLE_WEIGHTS.sp;
   const axes = wMean([
     [blended.stuff, w.stuff],
@@ -215,7 +217,8 @@ export function computePitchOverall(blended, role, results = null) {
   // carries more weight in league-adjusted mode, where the component
   // stats (K/9, HR/9) are themselves environment-colored.
   const kicker = getLeagueAdjusted() ? 0.3 : 0.15;
-  const ovr = results !== null ? axes * (1 - kicker) + results * kicker : axes;
+  let ovr = results !== null ? axes * (1 - kicker) + results * kicker : axes;
+  if (warGrade !== null) ovr = ovr * 0.85 + warGrade * 0.15;
   return Math.round(clamp(ovr));
 }
 
@@ -268,7 +271,8 @@ export function evaluatePitcher(input) {
   const tools = computePitchTools(r, extras, role);
   const ability = computePitchAbility(stats, info.level, tools);
   const blended = blendPitch(tools, ability);
-  const overall = computePitchOverall(blended, role, ability.results);
+  const warGrade = gradeFrom(num(stats.war), PWAR_PTS);
+  const overall = computePitchOverall(blended, role, ability.results, { warGrade });
 
   const hasPot =
     RATING_KEYS.some((k) => r[`${k}Pot`] != null) ||

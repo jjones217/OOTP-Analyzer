@@ -48,6 +48,7 @@ const BATTER_STAT_PREFS = {
   avg: ['avg', 'ba'], obp: ['obp'], slg: ['slg'],
   wrcPlus: ['wrc+', 'wrcplus', 'wrc'],
   sb: ['sb'], cs: ['cs'],
+  war: ['war'],
 };
 
 const PITCHER_RATING_PREFS = {
@@ -104,7 +105,7 @@ const POS_RATING_PREFS = Object.fromEntries(
 const PITCHER_STAT_PREFS = {
   ip: ['ip'], g: ['g'], gs: ['gs'], k: ['so', 'k'], bb: ['bb'], hr: ['hr'],
   era: ['era'], eraPlus: ['era+', 'eraplus'], fip: ['fip'], fipMinus: ['fip-', 'fipminus'],
-  whip: ['whip'],
+  whip: ['whip'], war: ['war'],
 };
 
 const LEVEL_ALIASES = {
@@ -158,9 +159,9 @@ const BATTER_RATING_KEYS = [
   'speed', 'stlAggr', 'stealing', 'baserunning', 'sacBunt', 'buntForHit',
 ];
 const BATTER_FIELDING_KEYS = ['cArm', 'cBlk', 'cFrm', 'ifRng', 'ifErr', 'ifArm', 'ifDp', 'ofRng', 'ofErr', 'ofArm'];
-const BATTER_STAT_KEYS = ['pa', 'hits', 'doubles', 'triples', 'hr', 'bb', 'k', 'avg', 'obp', 'slg', 'wrcPlus', 'sb', 'cs'];
+const BATTER_STAT_KEYS = ['pa', 'hits', 'doubles', 'triples', 'hr', 'bb', 'k', 'avg', 'obp', 'slg', 'wrcPlus', 'sb', 'cs', 'war'];
 const PITCHER_RATING_KEYS = ['stuff', 'stuffPot', 'movement', 'movementPot', 'hra', 'hraPot', 'pbabip', 'pbabipPot', 'control', 'controlPot'];
-const PITCHER_STAT_KEYS = ['ip', 'g', 'gs', 'k', 'bb', 'hr', 'era', 'eraPlus', 'fip', 'fipMinus', 'whip'];
+const PITCHER_STAT_KEYS = ['ip', 'g', 'gs', 'k', 'bb', 'hr', 'era', 'eraPlus', 'fip', 'fipMinus', 'whip', 'war'];
 
 export function parsePlayersCsv(text, { scale = '20-80', defaultLevel = 'mlb' } = {}) {
   // Normalize line endings — pasted text can mix CRLF and LF, which throws
