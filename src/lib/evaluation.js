@@ -260,7 +260,7 @@ export function computeBlended(tools, ability, statWeight = 0.5) {
 // WAR-style positional offense adjustment: the same bat is worth more at a
 // position where league-wide offense is scarce. A 91 wRC+ catcher is an
 // average-hitting catcher, not an average-hitting left fielder.
-const POS_BAT_ADJ = {
+export const POS_BAT_ADJ = {
   C: 3, SS: 2, '2B': 1.5, CF: 1.5, '3B': 0.5, RF: -1, LF: -1.5, '1B': -2.5, DH: -3.5,
 };
 

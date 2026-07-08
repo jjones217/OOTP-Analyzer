@@ -9,6 +9,7 @@ import {
   positionFits,
   to2080,
   POS_VALUE,
+  POS_BAT_ADJ,
 } from './evaluation.js';
 import { evaluatePitcher } from './pitchingEvaluation.js';
 
@@ -39,6 +40,11 @@ export function buildDepthChart(players) {
       pitchers.push({ entry, name: entry.summary.name, role: entry.form.info.role, asSp, asRp, stamina });
     } else {
       const overall = evaluatePlayer(entry.form).overall;
+      const listedPos = entry.form.info.position;
+      // The OVR bakes in the positional offense credit for the player's
+      // LISTED position — neutralize it here so each candidacy below can
+      // apply the credit for the position actually being considered.
+      const neutral = overall === null ? null : overall - (POS_BAT_ADJ[listedPos] ?? 0);
       const r = normalizeRatings(entry.form.ratings, entry.form.scale);
       const f = normalizeFielding(entry.form.fielding, entry.form.scale);
       const fits = positionFits(f, r, entry.form.posRatings, entry.form.scale);
@@ -46,8 +52,9 @@ export function buildDepthChart(players) {
         entry,
         name: entry.summary.name,
         overall,
+        neutral,
         fits,
-        listedPos: entry.form.info.position,
+        listedPos,
       });
     }
   }
@@ -75,7 +82,8 @@ export function buildDepthChart(players) {
         assumed = true;
       }
       if (fit === null) continue;
-      const score = b.overall !== null ? BAT_WEIGHT * b.overall + (1 - BAT_WEIGHT) * fit : fit;
+      const batHere = b.neutral === null ? null : b.neutral + (POS_BAT_ADJ[pos] ?? 0);
+      const score = batHere !== null ? BAT_WEIGHT * batHere + (1 - BAT_WEIGHT) * fit : fit;
       // Assignment rank includes positional value so a natural SS mans SS
       // before sliding down the spectrum to an easier (higher-fit) spot.
       const rank = score + (POS_VALUE[pos] ?? 0);
@@ -93,11 +101,12 @@ export function buildDepthChart(players) {
     startingAt.set(c.b, c.pos);
   }
 
-  // DH: best remaining bat.
+  // DH: best remaining bat, judged position-neutrally with the DH credit.
+  const dhScore = (b) => (b.neutral === null ? -1 : b.neutral + POS_BAT_ADJ.DH);
   const dhB = batters
     .filter((b) => !startingAt.has(b))
-    .sort((a, z) => (z.overall ?? -1) - (a.overall ?? -1))[0] ?? null;
-  const dh = dhB ? { b: dhB, pos: 'DH', fit: null, score: dhB.overall ?? 0 } : null;
+    .sort((a, z) => dhScore(z) - dhScore(a))[0] ?? null;
+  const dh = dhB ? { b: dhB, pos: 'DH', fit: null, score: Math.max(0, dhScore(dhB)) } : null;
   if (dhB) startingAt.set(dhB, 'DH');
 
   // Backups: best candidate not starting at that spot, bench preferred over
