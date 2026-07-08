@@ -212,14 +212,14 @@ export function PitcherEvaluator() {
               <div className="flex gap-4 shrink-0">
                 <div className="text-center">
                   <div className="text-3xl font-bold tabular-nums text-gray-900 dark:text-gray-100">
-                    {overall ?? '—'}
+                    {fmt(overall)}
                   </div>
                   <div className="text-[10px] uppercase tracking-wide text-gray-400">OVR (20–80)</div>
                 </div>
                 {potOverall !== null && (
                   <div className="text-center">
                     <div className="text-3xl font-bold tabular-nums text-blue-600 dark:text-blue-400">
-                      {potOverall}
+                      {fmt(potOverall)}
                     </div>
                     <div className="text-[10px] uppercase tracking-wide text-gray-400">POT</div>
                   </div>

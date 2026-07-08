@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { RATING_SCALES } from '../../lib/evaluation';
+import { RATING_SCALES, fmt } from '../../lib/evaluation';
 import {
   LEAGUE_LEVELS,
   INJURY_PRONE,
@@ -92,7 +92,7 @@ function PlayerRow({ player, scale, onChange, onBench, onDelete }) {
       </div>
       {value !== null && (
         <p className="text-[11px] text-gray-400">
-          Effective grade <span className="font-semibold tabular-nums text-gray-500 dark:text-gray-300">{grade}</span>
+          Effective grade <span className="font-semibold tabular-nums text-gray-500 dark:text-gray-300">{fmt(grade)}</span>
           {' · '}projects <span className="font-semibold tabular-nums text-gray-500 dark:text-gray-300">{annualWar}</span> WAR/yr
         </p>
       )}

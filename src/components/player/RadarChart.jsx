@@ -32,7 +32,7 @@ function seriesPath(axes, values) {
     .join(' ') + ' Z';
 }
 
-const fmt = (v) => (v === null || v === undefined ? '—' : Math.round(v));
+const fmt = (v) => (v === null || v === undefined ? '—' : Math.round(Math.min(80, Math.max(20, v)) / 5) * 5);
 
 // Pentagon radar on the 20-80 scale over five axes (default: the classic
 // batting tools; pass `axes` for other cards, e.g. pitching).

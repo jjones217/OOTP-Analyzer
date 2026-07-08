@@ -12,6 +12,7 @@ import {
   POS_BAT_ADJ,
 } from './evaluation.js';
 import { evaluatePitcher } from './pitchingEvaluation.js';
+import { snap5 } from './evaluation.js';
 
 // How much of a lineup slot's score is the bat vs the glove at that spot.
 const BAT_WEIGHT = 0.65;
@@ -162,9 +163,9 @@ function findUpgrades(starters, backups, dh, rotation, bullpen) {
       continue;
     }
     if (s.score < 42) {
-      add('high', pos, `${s.b.name} grades ${Math.round(s.score)} at ${pos} — a clear upgrade spot.`);
+      add('high', pos, `${s.b.name} grades ${snap5(s.score)} at ${pos} — a clear upgrade spot.`);
     } else if (s.score < 48) {
-      add('medium', pos, `${s.b.name} is below average at ${pos} (${Math.round(s.score)}) — upgrade candidate.`);
+      add('medium', pos, `${s.b.name} is below average at ${pos} (${snap5(s.score)}) — upgrade candidate.`);
     }
     if (!backups[pos]) {
       add('low', pos, `No backup behind ${s.b.name} at ${pos} — depth is thin.`);
@@ -172,7 +173,7 @@ function findUpgrades(starters, backups, dh, rotation, bullpen) {
   }
 
   if (dh && dh.score < 48 && dh.score > 0) {
-    add('medium', 'DH', `${dh.b.name} is a light bat for DH (${Math.round(dh.score)}).`);
+    add('medium', 'DH', `${dh.b.name} is a light bat for DH (${snap5(dh.score)}).`);
   } else if (!dh && Object.keys(starters).length > 0) {
     add('medium', 'DH', 'No bat left for DH — the roster has no bench.');
   }
@@ -183,7 +184,7 @@ function findUpgrades(starters, backups, dh, rotation, bullpen) {
     const weak = rotation.filter((p) => (p.asSp ?? 0) < 45);
     if (weak.length > 0) {
       add(weak.length >= 3 ? 'high' : 'medium', 'SP',
-        `Back of the rotation is weak: ${weak.map((p) => `${p.name} (${p.asSp ?? '—'})`).join(', ')}.`);
+        `Back of the rotation is weak: ${weak.map((p) => `${p.name} (${p.asSp === null ? '—' : snap5(p.asSp)})`).join(', ')}.`);
     }
   }
 
@@ -191,7 +192,7 @@ function findUpgrades(starters, backups, dh, rotation, bullpen) {
   if (!closer) {
     add('medium', 'RP', 'No relievers left for the bullpen after filling the rotation.');
   } else if ((closer.asRp ?? 0) < 50) {
-    add('medium', 'CL', `${closer.name} (${closer.asRp ?? '—'}) is a stretch as the closer.`);
+    add('medium', 'CL', `${closer.name} (${closer.asRp === null ? '—' : snap5(closer.asRp)}) is a stretch as the closer.`);
   }
 
   ups.sort((a, z) => SEV_ORDER[a.severity] - SEV_ORDER[z.severity]);
