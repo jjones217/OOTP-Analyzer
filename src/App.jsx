@@ -13,11 +13,6 @@ export default function App() {
   const [theme, setTheme] = useTheme();
   const [adjusted, setAdjusted] = useState(getLeagueAdjusted);
 
-  const toggleAdjusted = () => {
-    const next = !adjusted;
-    setLeagueAdjusted(next);
-    setAdjusted(next);
-  };
   // const { leagues, loading, addLeague, updateLeague, removeLeague } = useLeagues();
   // const [modal, setModal] = useState(null); // null | { mode: 'add' } | { mode: 'edit', league }
   // const [view, setView] = useState('leagues'); // 'leagues' | 'evaluator'
@@ -81,20 +76,31 @@ export default function App() {
           )} */}
 
           <div className="flex items-center gap-3">
-          {/* League-adjusted grading toggle */}
-          <button
-            onClick={toggleAdjusted}
-            aria-pressed={adjusted}
-            title="Grade stats relative to the league (wRC+, FIP-, ERA+) instead of raw MLB benchmarks. Turn on for stats-only leagues or leagues whose run environment differs from modern MLB."
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border ${
-              adjusted
-                ? 'border-blue-600 bg-blue-600 text-white'
-                : 'border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-            }`}
+          {/* League type: how the STAT side of grades is anchored. Visible
+              ratings (fielding, position, running, stamina, velo, GB%) are
+              always used in both modes. */}
+          <div
+            className="flex items-center gap-1.5"
+            title="How stats are graded. Ratings league: raw stats vs MLB-calibrated benchmarks. Stats-only league: league-relative metrics (wRC+, FIP-, ERA+) dominate, so an average player grades ~50 regardless of the league's run environment. Visible ratings — fielding, position, baserunning, stamina, velocity, GB% — always count in both modes."
           >
-            <span className={`w-2 h-2 rounded-full ${adjusted ? 'bg-white' : 'bg-gray-300 dark:bg-gray-600'}`} />
-            League-adjusted: {adjusted ? 'On' : 'Off'}
-          </button>
+            <span className="text-xs text-gray-400">League:</span>
+            <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-xs font-medium" role="group" aria-label="League type">
+              {[[false, 'Ratings'], [true, 'Stats-only']].map(([val, label]) => (
+                <button
+                  key={label}
+                  onClick={() => { setLeagueAdjusted(val); setAdjusted(val); }}
+                  aria-pressed={adjusted === val}
+                  className={`px-3 py-1.5 ${
+                    adjusted === val
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* Theme toggle */}
           <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-xs font-medium" role="group" aria-label="Theme">
