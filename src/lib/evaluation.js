@@ -49,6 +49,9 @@ export function num(v) {
 export function to2080(value, scale) {
   const v = num(value);
   if (v === null) return null;
+  // No rating scale goes below 1 — a fractional value here is a leaked
+  // stat (e.g. a BABIP of .351 read as a rating), not a rating.
+  if (v < 1) return null;
   switch (scale) {
     case '1-100': return clamp(20 + ((v - 1) / 99) * 60);
     case '1-10': return clamp(20 + ((v - 1) / 9) * 60);

@@ -64,7 +64,7 @@ const STAT_FIELDS = [
   { key: 'avg', label: 'AVG', step: 0.001, hint: '.285' },
   { key: 'obp', label: 'OBP', step: 0.001, hint: '.350' },
   { key: 'slg', label: 'SLG', step: 0.001, hint: '.450' },
-  { key: 'wrcPlus', label: 'wRC+' },
+  { key: 'wrcPlus', label: 'wRC+/OPS+' },
   { key: 'sb', label: 'SB' },
   { key: 'cs', label: 'CS' },
   { key: 'war', label: 'WAR', step: 0.1, hint: '2.0' },

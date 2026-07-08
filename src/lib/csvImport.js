@@ -46,7 +46,7 @@ const BATTER_STAT_PREFS = {
   pa: ['pa'], hits: ['h', 'hits'], doubles: ['2b1', '2b'], triples: ['3b1', '3b'], hr: ['hr'],
   bb: ['bb'], k: ['so', 'k'],
   avg: ['avg', 'ba'], obp: ['obp'], slg: ['slg'],
-  wrcPlus: ['wrc+', 'wrcplus', 'wrc'],
+  wrcPlus: ['wrc+', 'wrcplus', 'wrc', 'ops+', 'opsplus'],
   sb: ['sb'], cs: ['cs'],
   war: ['war'],
 };
@@ -183,6 +183,13 @@ export function parsePlayersCsv(text, { scale = '20-80', defaultLevel = 'mlb' } 
   const pitches = mapHeaders(fields, PITCH_PREFS);
   const posRatingCols = mapHeaders(fields, POS_RATING_PREFS);
   const warCol = mapHeaders(fields, WAR_PREFS);
+
+  // A BABIP column in a stats view is the stat (.351), not the rating —
+  // only read it as a rating when a batting-ratings block (CON) exists.
+  if (bRatings.contact === undefined) {
+    delete bRatings.babip;
+    delete bRatings.babipPot;
+  }
 
   // Without the "X Pot" columns there's no position-rating block, so a bare
   // "2B"/"3B" header is the doubles/triples stat, not a position rating.
