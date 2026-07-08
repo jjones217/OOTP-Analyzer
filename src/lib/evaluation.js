@@ -257,6 +257,16 @@ export function computeBlended(tools, ability, statWeight = 0.5) {
   };
 }
 
+// WAR-style positional offense adjustment: the same bat is worth more at a
+// position where league-wide offense is scarce. A 91 wRC+ catcher is an
+// average-hitting catcher, not an average-hitting left fielder.
+const POS_BAT_ADJ = {
+  C: 3, SS: 2, '2B': 1.5, CF: 1.5, '3B': 0.5, RF: -1, LF: -1.5, '1B': -2.5, DH: -3.5,
+};
+
+// Seasonal WAR (per 600 PA) → grade. Used as a light kicker only.
+const WAR_PTS = [[-1, 30], [0, 40], [1, 46], [2, 50], [3, 56], [4, 62], [5, 68], [6, 73], [7, 78]];
+
 // Positional weight profiles for the overall grade — defense matters more
 // up the middle, bats matter more at the corners.
 const OVR_WEIGHTS = {
@@ -271,16 +281,21 @@ const OVR_WEIGHTS = {
   DH: { hit: 0.42, power: 0.38, run: 0.08, field: 0.07, arm: 0.05 },
 };
 
-export function computeOverall(blended, position) {
+export function computeOverall(blended, position, { warGrade = null } = {}) {
   const w = OVR_WEIGHTS[position] ?? OVR_WEIGHTS.LF;
-  const ovr = wMean([
+  let ovr = wMean([
     [blended.hit, w.hit],
     [blended.power, w.power],
     [blended.run, w.run],
     [blended.field, w.field],
     [blended.arm, w.arm],
   ]);
-  return ovr === null ? null : Math.round(clamp(ovr));
+  if (ovr === null) return null;
+  ovr += POS_BAT_ADJ[position] ?? 0;
+  // WAR is a sanity check on the whole package — folded in lightly, never
+  // the driver.
+  if (warGrade !== null) ovr = ovr * 0.85 + warGrade * 0.15;
+  return Math.round(clamp(ovr));
 }
 
 export function gradeLabel(ovr) {
@@ -424,10 +439,29 @@ export function evaluatePlayer(input) {
   const f = normalizeFielding(fielding, scale);
 
   const tools = computeTools(r, f);
+
+  // The in-game position rating is the game's own read on a player's
+  // defense at his spot — when it beats the granular skill composite (or
+  // the skills are missing entirely), it carries the Field tool.
+  const posRatingValues = FIELD_POSITIONS
+    .map((pos) => to2080(posRatings?.[pos]?.ovr, scale))
+    .filter((v) => v !== null);
+  if (posRatingValues.length > 0) {
+    const bestPos = Math.max(...posRatingValues);
+    tools.field = tools.field === null ? bestPos : Math.max(tools.field, bestPos);
+  }
+
   const ability = computeAbility(stats, info.level, tools);
   const statWeight = ability.hasStats ? statBlendWeight(ability.pa) : 0;
   const blended = computeBlended(tools, ability, statWeight);
-  const overall = computeOverall(blended, info.position);
+
+  // Seasonal WAR, normalized per 600 PA when PA is known.
+  const war = num(stats.war);
+  const pa = num(stats.pa);
+  const war600 = war !== null && pa !== null && pa > 0 ? (war * 600) / pa : war;
+  const warGrade = gradeFrom(war600, WAR_PTS);
+
+  const overall = computeOverall(blended, info.position, { warGrade });
   const recPositions = recommendPositions(f, r, posRatings, scale);
 
   // Ceiling grade — scouting potential only (stats measure the present,
