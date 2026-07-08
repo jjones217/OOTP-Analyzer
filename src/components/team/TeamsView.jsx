@@ -148,6 +148,20 @@ export function TeamsView() {
   const team = state.teams.find((t) => t.id === state.activeId) ?? null;
   const chart = useMemo(() => (team ? buildDepthChart(team.players) : null), [team]);
 
+  // Entries imported before the parser learned position ratings / WAR have
+  // no defensive signal stored — the depth chart can't see what was never
+  // captured. Re-importing the CSVs heals them via the field-level merge.
+  const staleBatters = useMemo(() => {
+    if (!team) return 0;
+    return team.players.filter((p) => {
+      if (p.type !== 'batter') return false;
+      const pr = p.form.posRatings ?? {};
+      const noPos = Object.values(pr).every((v) => !v?.ovr && !v?.pot);
+      const noField = Object.values(p.form.fielding ?? {}).every((v) => !v);
+      return noPos && noField;
+    }).length;
+  }, [team]);
+
   const addTeam = () => {
     const name = newName.trim() || `Team ${state.teams.length + 1}`;
     const t = newTeam(name);
@@ -262,6 +276,13 @@ export function TeamsView() {
           </div>
         )}
         {feedback && <p className="mt-2 text-xs text-green-600 dark:text-green-400">{feedback}</p>}
+        {team && staleBatters > 0 && (
+          <p className="mt-2 text-xs rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 px-3 py-2">
+            {staleBatters} batter{staleBatters === 1 ? ' has' : 's have'} no position or fielding data stored —
+            likely imported before the importer read those columns. Re-import your hitting CSV
+            (and the pitching CSV for WAR/ERA+) to refresh them; players merge by name, nothing duplicates.
+          </p>
+        )}
       </Section>
 
       {!team ? (
