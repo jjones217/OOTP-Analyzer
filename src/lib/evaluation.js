@@ -161,10 +161,13 @@ export function computeAbility(stats, level, tools) {
   const adj = (g) => (g === null ? null : clamp(g + offset));
 
   const pa = num(stats.pa);
-  const avg = num(stats.avg);
-  const obp = num(stats.obp);
-  const slg = num(stats.slg);
-  const wrcPlus = num(stats.wrcPlus);
+  // Zero PA means the slash line and wRC+ are printed artifacts
+  // (.000 / 100) — treat the whole stat line as absent.
+  const noSample = pa !== null && pa <= 0;
+  const avg = noSample ? null : num(stats.avg);
+  const obp = noSample ? null : num(stats.obp);
+  const slg = noSample ? null : num(stats.slg);
+  const wrcPlus = noSample ? null : num(stats.wrcPlus);
   const hr = num(stats.hr);
   const bb = num(stats.bb);
   const k = num(stats.k);
@@ -474,7 +477,10 @@ export function evaluatePlayer(input) {
   // so they don't factor into what the player could become).
   const hasPot = POT_KEYS.some((k) => r[k] != null);
   const potTools = hasPot ? computeTools(r, f, { potential: true }) : null;
-  const potOverall = hasPot ? computeOverall(potTools, info.position) : null;
+  // The ceiling is at least what he's already doing — stats can outrun the
+  // scouted potential, but POT should never display below OVR.
+  let potOverall = hasPot ? computeOverall(potTools, info.position) : null;
+  if (potOverall !== null && overall !== null) potOverall = Math.max(potOverall, overall);
 
   return { tools, ability, blended, overall, recPositions, potTools, potOverall, statWeight };
 }

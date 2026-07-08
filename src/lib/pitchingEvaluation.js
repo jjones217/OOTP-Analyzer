@@ -126,11 +126,14 @@ export function computePitchAbility(stats, level, tools) {
   const k = num(stats.k);
   const bb = num(stats.bb);
   const hr = num(stats.hr);
-  const era = num(stats.era);
-  const fip = num(stats.fip);
-  const fipMinus = num(stats.fipMinus);
-  const eraPlus = num(stats.eraPlus);
-  const whip = num(stats.whip);
+  // Zero innings means every rate stat is a printed artifact (OOTP shows
+  // ERA 0.00 / FIP- 0 for pitchers who never threw) — treat them as absent.
+  const noSample = ip === null || ip <= 0;
+  const era = noSample ? null : num(stats.era);
+  const fip = noSample ? null : num(stats.fip);
+  const fipMinus = noSample ? null : num(stats.fipMinus);
+  const eraPlus = noSample ? null : num(stats.eraPlus);
+  const whip = noSample ? null : num(stats.whip);
 
   const per9 = (x) => (x !== null && ip !== null && ip > 0 ? (x * 9) / ip : null);
 
@@ -278,7 +281,8 @@ export function evaluatePitcher(input) {
     RATING_KEYS.some((k) => r[`${k}Pot`] != null) ||
     PITCH_TYPES.some(({ key }) => p[`${key}Pot`] != null);
   const potTools = hasPot ? computePitchTools(r, extras, role, { potential: true }) : null;
-  const potOverall = hasPot ? computePitchOverall(potTools, role) : null;
+  let potOverall = hasPot ? computePitchOverall(potTools, role) : null;
+  if (potOverall !== null && overall !== null) potOverall = Math.max(potOverall, overall);
 
   return { tools, ability, blended, overall, potTools, potOverall, results: ability.results };
 }
