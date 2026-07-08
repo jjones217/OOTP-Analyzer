@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { RATING_SCALES, LEAGUE_LEVELS } from '../../lib/evaluation';
+import { RATING_SCALES, LEAGUE_LEVELS, fmt } from '../../lib/evaluation';
 import { parsePlayersCsv } from '../../lib/csvImport';
 import { savePlayer, loadIntoEvaluator } from '../../lib/savedPlayers';
 import { addPlayerToTrade, tradeSideLabels } from '../../lib/tradeStore';
@@ -168,9 +168,9 @@ export function CsvImport({ onLoaded }) {
                     </div>
                   </div>
                   <div className="text-right shrink-0 w-24">
-                    <span className="text-lg font-bold tabular-nums text-gray-900 dark:text-gray-100">{s.ovr ?? '—'}</span>
+                    <span className="text-lg font-bold tabular-nums text-gray-900 dark:text-gray-100">{fmt(s.ovr)}</span>
                     {s.pot !== null && s.pot !== undefined && (
-                      <span className="text-sm font-semibold tabular-nums text-blue-600 dark:text-blue-400"> / {s.pot}</span>
+                      <span className="text-sm font-semibold tabular-nums text-blue-600 dark:text-blue-400"> / {fmt(s.pot)}</span>
                     )}
                     <div className="text-[10px] uppercase tracking-wide text-gray-400 -mt-0.5">ovr / pot</div>
                   </div>

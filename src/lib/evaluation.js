@@ -36,8 +36,11 @@ export const FIELD_POSITIONS = ['C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
 
 export const clamp = (v, lo = 20, hi = 80) => Math.min(hi, Math.max(lo, v));
 
-// Display helper: round a grade, em-dash for missing.
-export const fmt = (v) => (v === null || v === undefined ? '\u2014' : Math.round(v));
+// Display helpers. Grades are computed precisely but DISPLAYED on the
+// classic scouting scale — snapped to the nearest 5 (20, 25, ... 80) like
+// OOTP shows them. Internal comparisons and rankings keep full precision.
+export const snap5 = (v) => Math.round(clamp(v) / 5) * 5;
+export const fmt = (v) => (v === null || v === undefined ? '\u2014' : snap5(v));
 
 export function num(v) {
   if (v === '' || v === null || v === undefined) return null;

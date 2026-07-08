@@ -48,7 +48,7 @@ function DiamondView({ chart }) {
             key={pos}
             label={pos}
             name={s ? s.b.name : '— open —'}
-            grade={s ? Math.round(s.score) : null}
+            grade={s ? fmt(s.score) : null}
             x={x}
             y={y}
           />
@@ -80,15 +80,15 @@ function ListView({ chart }) {
                 <tr key={pos} className="border-t border-gray-100 dark:border-gray-800">
                   <td className="py-1.5 font-semibold text-gray-600 dark:text-gray-300">{pos}</td>
                   <td className="py-1.5 text-gray-900 dark:text-gray-100">{s ? s.b.name : <span className="text-red-500">open</span>}</td>
-                  <td className="py-1.5 text-right tabular-nums font-semibold text-gray-900 dark:text-gray-100">{s ? Math.round(s.score) : '—'}</td>
-                  <td className="py-1.5 pl-3 text-gray-500 dark:text-gray-400">{b ? `${b.b.name} (${Math.round(b.score)})` : '—'}</td>
+                  <td className="py-1.5 text-right tabular-nums font-semibold text-gray-900 dark:text-gray-100">{s ? fmt(s.score) : '—'}</td>
+                  <td className="py-1.5 pl-3 text-gray-500 dark:text-gray-400">{b ? `${b.b.name} (${fmt(b.score)})` : '—'}</td>
                 </tr>
               );
             })}
             <tr className="border-t border-gray-100 dark:border-gray-800">
               <td className="py-1.5 font-semibold text-gray-600 dark:text-gray-300">DH</td>
               <td className="py-1.5 text-gray-900 dark:text-gray-100">{chart.dh ? chart.dh.b.name : <span className="text-gray-400">—</span>}</td>
-              <td className="py-1.5 text-right tabular-nums font-semibold text-gray-900 dark:text-gray-100">{chart.dh ? Math.round(chart.dh.score) : '—'}</td>
+              <td className="py-1.5 text-right tabular-nums font-semibold text-gray-900 dark:text-gray-100">{chart.dh ? fmt(chart.dh.score) : '—'}</td>
               <td className="py-1.5 pl-3 text-gray-400">bench bat</td>
             </tr>
           </tbody>
@@ -313,7 +313,7 @@ export function TeamsView() {
             {view === 'diamond' ? <DiamondView chart={chart} /> : <ListView chart={chart} />}
             {view === 'diamond' && (
               <p className="text-center text-xs text-gray-400 mt-1">
-                DH: <span className="text-gray-600 dark:text-gray-300 font-medium">{chart.dh ? `${chart.dh.b.name} (${Math.round(chart.dh.score)})` : '—'}</span>
+                DH: <span className="text-gray-600 dark:text-gray-300 font-medium">{chart.dh ? `${chart.dh.b.name} (${fmt(chart.dh.score)})` : '—'}</span>
                 {chart.bullpen[0] && (
                   <> · CL: <span className="text-gray-600 dark:text-gray-300 font-medium">{chart.bullpen[0].name} ({fmt(chart.bullpen[0].asRp)})</span></>
                 )}
