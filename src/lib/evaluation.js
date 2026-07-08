@@ -1,5 +1,6 @@
 // Player evaluation engine.
 // Everything is normalized to the 20-80 scouting scale internally.
+import { getLeagueAdjusted } from './evalSettings.js';
 // "Tools" = what the scouting ratings say. "Ability" = what the stats say
 // (league-adjusted), falling back to ratings where stats can't measure
 // (fielding, arm).
@@ -172,19 +173,37 @@ export function computeAbility(stats, level, tools) {
   const rate = (x) => (x !== null && pa !== null && pa > 0 ? (x / pa) * 100 : null);
 
   // wRC+ is already league/park adjusted by OOTP, so no level offset there.
-  const hitStat = wMean([
-    [adj(gradeFrom(avg, AVG_PTS)), 0.4],
-    [adj(gradeFrom(obp, OBP_PTS)), 0.2],
-    [gradeFrom(wrcPlus, WRC_PTS), 0.2],
-    [adj(gradeFrom(rate(k), KPCT_PTS)), 0.1],
-    [adj(gradeFrom(rate(bb), BBPCT_PTS)), 0.1],
-  ]);
+  // In league-adjusted mode it dominates: raw slash lines mislead when the
+  // league's run environment differs from the MLB-calibrated anchors.
+  const la = getLeagueAdjusted();
+  const hitStat = la
+    ? wMean([
+        [gradeFrom(wrcPlus, WRC_PTS), 0.6],
+        [adj(gradeFrom(avg, AVG_PTS)), 0.1],
+        [adj(gradeFrom(obp, OBP_PTS)), 0.1],
+        [adj(gradeFrom(rate(k), KPCT_PTS)), 0.1],
+        [adj(gradeFrom(rate(bb), BBPCT_PTS)), 0.1],
+      ])
+    : wMean([
+        [adj(gradeFrom(avg, AVG_PTS)), 0.4],
+        [adj(gradeFrom(obp, OBP_PTS)), 0.2],
+        [gradeFrom(wrcPlus, WRC_PTS), 0.2],
+        [adj(gradeFrom(rate(k), KPCT_PTS)), 0.1],
+        [adj(gradeFrom(rate(bb), BBPCT_PTS)), 0.1],
+      ]);
 
-  const powerStat = wMean([
-    [adj(gradeFrom(slg, SLG_PTS)), 0.35],
-    [adj(gradeFrom(iso, ISO_PTS)), 0.35],
-    [adj(gradeFrom(per600(hr), HR_PTS)), 0.3],
-  ]);
+  const powerStat = la
+    ? wMean([
+        [gradeFrom(wrcPlus, WRC_PTS), 0.25],
+        [adj(gradeFrom(iso, ISO_PTS)), 0.3],
+        [adj(gradeFrom(per600(hr), HR_PTS)), 0.25],
+        [adj(gradeFrom(slg, SLG_PTS)), 0.2],
+      ])
+    : wMean([
+        [adj(gradeFrom(slg, SLG_PTS)), 0.35],
+        [adj(gradeFrom(iso, ISO_PTS)), 0.35],
+        [adj(gradeFrom(per600(hr), HR_PTS)), 0.3],
+      ]);
 
   // Steal grade tempered by success rate: below ~65% success, volume lies.
   let sbGrade = gradeFrom(per600(sb), SB_PTS);

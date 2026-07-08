@@ -2,6 +2,7 @@
 // everything normalized to 20-80, Tools from scouting ratings, Ability from
 // the stat line (league-adjusted), blended for the overall grade.
 import { LEAGUE_LEVELS, to2080, clamp, num, gradeFrom, wMean } from './evaluation.js';
+import { getLeagueAdjusted } from './evalSettings.js';
 
 export const PITCHER_ROLES = [
   { id: 'sp', label: 'SP' },
@@ -39,6 +40,7 @@ const HR9_PTS = [[0.5, 70], [0.8, 60], [1.0, 53], [1.2, 48], [1.5, 40], [2.0, 30
 const ERA_PTS = [[2.5, 75], [3.0, 66], [3.5, 58], [4.0, 50], [4.5, 44], [5.5, 33], [7.0, 22]];
 const FIP_PTS = ERA_PTS;
 const FIPM_PTS = [[70, 72], [80, 64], [90, 57], [100, 50], [110, 44], [125, 35], [140, 27]];
+const ERAP_PTS = [[60, 25], [80, 40], [90, 45], [100, 50], [115, 58], [130, 65], [150, 72], [180, 80]];
 const WHIP_PTS = [[1.00, 72], [1.10, 64], [1.20, 56], [1.30, 50], [1.40, 43], [1.60, 32]];
 const IPGS_PTS = [[4.5, 40], [5.3, 48], [6.0, 56], [6.7, 64], [7.3, 72]];
 const VELO_PTS = [[88, 30], [91, 40], [93, 48], [95, 55], [97, 63], [99, 72], [101, 80]];
@@ -125,6 +127,7 @@ export function computePitchAbility(stats, level, tools) {
   const era = num(stats.era);
   const fip = num(stats.fip);
   const fipMinus = num(stats.fipMinus);
+  const eraPlus = num(stats.eraPlus);
   const whip = num(stats.whip);
 
   const per9 = (x) => (x !== null && ip !== null && ip > 0 ? (x * 9) / ip : null);
@@ -140,14 +143,24 @@ export function computePitchAbility(stats, level, tools) {
   const staminaStat =
     gs !== null && gs >= 5 && ip !== null ? adj(gradeFrom(ip / gs, IPGS_PTS)) : null;
 
-  // Run-prevention results — FIP- is already league/park adjusted, so no
-  // level offset there. Feeds the OVR as a kicker, not a radar axis.
-  const results = wMean([
-    [gradeFrom(fipMinus, FIPM_PTS), 0.4],
-    [adj(gradeFrom(fip, FIP_PTS)), 0.25],
-    [adj(gradeFrom(era, ERA_PTS)), 0.15],
-    [adj(gradeFrom(whip, WHIP_PTS)), 0.2],
-  ]);
+  // Run-prevention results — FIP- and ERA+ are already league/park
+  // adjusted, so no level offset on those. Feeds the OVR as a kicker, not
+  // a radar axis. In league-adjusted mode the relative metrics dominate.
+  const results = getLeagueAdjusted()
+    ? wMean([
+        [gradeFrom(fipMinus, FIPM_PTS), 0.45],
+        [gradeFrom(eraPlus, ERAP_PTS), 0.3],
+        [adj(gradeFrom(fip, FIP_PTS)), 0.1],
+        [adj(gradeFrom(era, ERA_PTS)), 0.05],
+        [adj(gradeFrom(whip, WHIP_PTS)), 0.1],
+      ])
+    : wMean([
+        [gradeFrom(fipMinus, FIPM_PTS), 0.35],
+        [gradeFrom(eraPlus, ERAP_PTS), 0.15],
+        [adj(gradeFrom(fip, FIP_PTS)), 0.2],
+        [adj(gradeFrom(era, ERA_PTS)), 0.1],
+        [adj(gradeFrom(whip, WHIP_PTS)), 0.2],
+      ]);
 
   return {
     stuff: stuffStat ?? tools.stuff,
@@ -198,8 +211,11 @@ export function computePitchOverall(blended, role, results = null) {
     [blended.stamina, w.stamina],
   ]);
   if (axes === null) return null;
-  // Actual run prevention (ERA/FIP/WHIP) refines the component view.
-  const ovr = results !== null ? axes * 0.85 + results * 0.15 : axes;
+  // Actual run prevention (ERA/FIP/WHIP) refines the component view — and
+  // carries more weight in league-adjusted mode, where the component
+  // stats (K/9, HR/9) are themselves environment-colored.
+  const kicker = getLeagueAdjusted() ? 0.3 : 0.15;
+  const ovr = results !== null ? axes * (1 - kicker) + results * kicker : axes;
   return Math.round(clamp(ovr));
 }
 
