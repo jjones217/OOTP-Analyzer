@@ -114,6 +114,8 @@ const LEVEL_ALIASES = {
   'a+': 'high-a', hia: 'high-a', higha: 'high-a',
   a: 'low-a', 'a-': 'low-a', lowa: 'low-a',
   r: 'rookie', rk: 'rookie', rookie: 'rookie',
+  college: 'college', ncaa: 'college', col: 'college', univ: 'college',
+  hs: 'hs', highschool: 'hs', prep: 'hs',
   int: 'intl', intl: 'intl',
 };
 

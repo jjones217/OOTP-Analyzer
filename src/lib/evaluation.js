@@ -19,6 +19,8 @@ export const LEAGUE_LEVELS = [
   { id: 'high-a', label: 'High A', offset: -14 },
   { id: 'low-a', label: 'Low A', offset: -17 },
   { id: 'rookie', label: 'Rookie', offset: -20 },
+  { id: 'college', label: 'College (feeder)', offset: -22 },
+  { id: 'hs', label: 'High School (feeder)', offset: -28 },
   { id: 'intl', label: 'International / Other', offset: -12 },
 ];
 
@@ -181,13 +183,15 @@ export function computeAbility(stats, level, tools) {
   const per600 = (x) => (x !== null && pa !== null && pa > 0 ? (x * 600) / pa : x);
   const rate = (x) => (x !== null && pa !== null && pa > 0 ? (x / pa) * 100 : null);
 
-  // wRC+ is already league/park adjusted by OOTP, so no level offset there.
-  // In league-adjusted mode it dominates: raw slash lines mislead when the
-  // league's run environment differs from the MLB-calibrated anchors.
+  // wRC+ is park/environment adjusted, but only relative to its own league
+  // level — a 100 wRC+ AA (or college) hitter is average *there*, so the
+  // level offset still applies. In league-adjusted mode it dominates: raw
+  // slash lines mislead when the run environment differs from the
+  // MLB-calibrated anchors.
   const la = getLeagueAdjusted();
   const hitStat = la
     ? wMean([
-        [gradeFrom(wrcPlus, WRC_PTS), 0.6],
+        [adj(gradeFrom(wrcPlus, WRC_PTS)), 0.6],
         [adj(gradeFrom(avg, AVG_PTS)), 0.1],
         [adj(gradeFrom(obp, OBP_PTS)), 0.1],
         [adj(gradeFrom(rate(k), KPCT_PTS)), 0.1],
@@ -196,14 +200,14 @@ export function computeAbility(stats, level, tools) {
     : wMean([
         [adj(gradeFrom(avg, AVG_PTS)), 0.4],
         [adj(gradeFrom(obp, OBP_PTS)), 0.2],
-        [gradeFrom(wrcPlus, WRC_PTS), 0.2],
+        [adj(gradeFrom(wrcPlus, WRC_PTS)), 0.2],
         [adj(gradeFrom(rate(k), KPCT_PTS)), 0.1],
         [adj(gradeFrom(rate(bb), BBPCT_PTS)), 0.1],
       ]);
 
   const powerStat = la
     ? wMean([
-        [gradeFrom(wrcPlus, WRC_PTS), 0.25],
+        [adj(gradeFrom(wrcPlus, WRC_PTS)), 0.25],
         [adj(gradeFrom(iso, ISO_PTS)), 0.3],
         [adj(gradeFrom(per600(hr), HR_PTS)), 0.25],
         [adj(gradeFrom(slg, SLG_PTS)), 0.2],

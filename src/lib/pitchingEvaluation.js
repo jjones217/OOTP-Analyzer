@@ -148,20 +148,21 @@ export function computePitchAbility(stats, level, tools) {
   const staminaStat =
     gs !== null && gs >= 5 && ip !== null ? adj(gradeFrom(ip / gs, IPGS_PTS)) : null;
 
-  // Run-prevention results — FIP- and ERA+ are already league/park
-  // adjusted, so no level offset on those. Feeds the OVR as a kicker, not
-  // a radar axis. In league-adjusted mode the relative metrics dominate.
+  // Run-prevention results. FIP- and ERA+ are park/environment adjusted,
+  // but only relative to their own league level — the level offset still
+  // applies (0 at MLB). Feeds the OVR as a kicker, not a radar axis. In
+  // league-adjusted mode the relative metrics dominate.
   const results = getLeagueAdjusted()
     ? wMean([
-        [gradeFrom(fipMinus, FIPM_PTS), 0.45],
-        [gradeFrom(eraPlus, ERAP_PTS), 0.3],
+        [adj(gradeFrom(fipMinus, FIPM_PTS)), 0.45],
+        [adj(gradeFrom(eraPlus, ERAP_PTS)), 0.3],
         [adj(gradeFrom(fip, FIP_PTS)), 0.1],
         [adj(gradeFrom(era, ERA_PTS)), 0.05],
         [adj(gradeFrom(whip, WHIP_PTS)), 0.1],
       ])
     : wMean([
-        [gradeFrom(fipMinus, FIPM_PTS), 0.35],
-        [gradeFrom(eraPlus, ERAP_PTS), 0.15],
+        [adj(gradeFrom(fipMinus, FIPM_PTS)), 0.35],
+        [adj(gradeFrom(eraPlus, ERAP_PTS)), 0.15],
         [adj(gradeFrom(fip, FIP_PTS)), 0.2],
         [adj(gradeFrom(era, ERA_PTS)), 0.1],
         [adj(gradeFrom(whip, WHIP_PTS)), 0.2],
