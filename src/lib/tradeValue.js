@@ -18,9 +18,9 @@ export const INJURY_PRONE = [
 const WAR_PTS = [[40, 0.3], [45, 1.0], [50, 2.0], [55, 3.2], [60, 4.5], [65, 5.8], [70, 7.0], [75, 8.3], [80, 9.5]];
 
 // Chance a prospect reaches his scouted ceiling, by level...
-const DEV_PROB = { mlb: 0.85, aaa: 0.6, aa: 0.45, 'high-a': 0.35, 'low-a': 0.28, rookie: 0.2, intl: 0.4 };
+const DEV_PROB = { mlb: 0.85, aaa: 0.6, aa: 0.45, 'high-a': 0.35, 'low-a': 0.28, rookie: 0.2, college: 0.18, hs: 0.12, intl: 0.4 };
 // ...and how many years he's still away from the majors.
-const ETA_YEARS = { mlb: 0, aaa: 1, aa: 2, 'high-a': 3, 'low-a': 3.5, rookie: 4, intl: 2.5 };
+const ETA_YEARS = { mlb: 0, aaa: 1, aa: 2, 'high-a': 3, 'low-a': 3.5, rookie: 4, college: 4.5, hs: 5.5, intl: 2.5 };
 
 const DISCOUNT = 0.92; // per-year time discount — a WAR now beats a WAR later
 const WAR_COST = 8; // $M per WAR, for the salary offset
